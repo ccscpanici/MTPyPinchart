@@ -90,12 +90,3 @@ def get_xl_data(a_file):
 
     return sheet_data
 # end get_xl_data
-
-# if __name__ == "__main__":
-    
-#     ts1 = time.time()
-#     _workbook = get_xl_data(test_file)
-#     ts2 = time.time()
-#     td = ts2 - ts1
-#     print("time to load = %s" % td)
-#     print(_workbook.keys())

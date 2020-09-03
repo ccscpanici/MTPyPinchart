@@ -78,6 +78,98 @@ class SheetDataBase(object):
     # end search_in_row
 # end SheetDataBase
 
+class PLCSheetData(SheetDataBase):
+
+    def __init__(self, sheet_dict, config_data):
+        super(PLCSheetData, self).__init__(sheet_dict)
+        self.config_data = config_data
+    # end __init__()
+
+    def get_plc_data(self):
+
+        _header_row = self.get_header_row()
+        _data_structure = self.get_plc_data_structure(_header_row)
+
+        for a_plc_range in _data_structure:
+
+
+        # end for
+        
+        return None
+
+    # end get_plc_data
+
+    def get_header_row(self):
+        _header_cell = self.search_sheet(DATA_HEADER_FLAG)
+        _header_row = self.get_row(_header_cell['row'])
+        return _header_row
+    # end get_header_row
+
+    def get_plc_data_structure(self, header_row):
+        
+        # plc data value columns
+        _columns = []
+
+        # converts the types to lower case for comparison
+        _valid_types = []
+        for a_type in VALID_FIELD_TYPES:
+            _valid_types.append(a_type.lower())
+        # end for
+
+        # get the header row
+        _header_row = self.get_header_row()
+        
+        for a_cell in _header_row:
+            _cell_value = a_cell['value']
+            if _cell_value is not None:
+                if _cell_value.lower in _valid_types:
+                    # save the column
+
+                    # this is the cell that should have the address
+                    _address_cell = self.get_cell(a_cell['row'], a_cell['column'] + self.config_data['ADDRESS OFFSET'])
+                    _address_span = _address_cell['col_span']
+                    _data_row_start = a_cell['row'] + self.config_data['DATA ROW OFFSET']
+                    
+                    _column_data = {
+                        'value':{
+                            'column':a_cell['column'],
+                            'col_span':a_cell['col_span']
+                        },
+                        'address': {
+                            'column':_address_cell['column'],
+                            'col_span':_address_cell['col_span']
+                        },
+                        'data': {
+                            'type':_cell_value,
+                            'start_row':_data_row_start
+                        }
+                    }
+                    if _cell_value == "int-16 data":
+                        _bits_start = a_cell['column'] + self.config_data['INT-16 BITS OFFSET']
+                        _bits_end = _bits_start + 16
+                        _column_data['bits'] = {
+                            'start_col':_bits_start,
+                            'end_col':_bits_end
+                        }
+                    elif _cell_value == 'dint-32 data':
+                        _bits_start = a_cell['column'] + self.config_data['DINT-32 BITS OFFSET']
+                        _bits_end = _bits_start + 32
+                        _column_data['bits'] = {
+                            'start_col':_bits_start,
+                            'end_col':_bits_end
+                        }
+                    else:
+                        pass
+                    # end if
+
+                    _columns.append(_column_data)
+                # end if
+            # end if
+        # end for
+        return _columns
+    # end get_plc_value_column_numbers
+# end PLCSheetData
+
 class MainSheetData(SheetDataBase):
 
     config_data = None
