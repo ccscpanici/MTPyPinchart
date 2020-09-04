@@ -74,7 +74,7 @@ def get_xl_data(a_file):
     shutil.copy(a_file, _temp_file)
 
     # open up the temporary file
-    wb = openpyxl.load_workbook(_temp_file, read_only=False, data_only=False, keep_links=False)
+    wb = openpyxl.load_workbook(_temp_file, read_only=False, data_only=True, keep_links=False)
     sheet_data = {}
     sheets = wb.sheetnames
     for a_sheet in sheets:

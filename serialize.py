@@ -37,9 +37,13 @@ class SheetDataBase(object):
         # with the columns to the right of that cell 
         # in the current span.
         _string_builder = first_cell['value']
+        if _string_builder is None:
+            return None
+        # end if
+
         for i in range(1, span):
             _tmp_cell = self.get_cell(first_cell['row'], first_cell['column'] + i)
-            _tmp_value = _tmp_cell['value']
+            _tmp_value = str(_tmp_cell['value'])
             if _tmp_value is None:
                 _tmp_value = ""
             # end if
@@ -65,6 +69,10 @@ class SheetDataBase(object):
         # end if
     # end get_cell
 
+    def get_cell_in_row(self, row, column_number):
+        return row[column_number - 1]
+    # end get_cell_in_row
+
     def search_in_row(self, row, value):
         for a_cell in row:
             _value = a_cell['value']
@@ -85,25 +93,73 @@ class PLCSheetData(SheetDataBase):
         self.config_data = config_data
     # end __init__()
 
-    def get_plc_data(self):
+    def get_plc_data(self, data_row_offset):
+        # returns dictionary of address
+        # and value, as well as the cell
+        # references.
 
         _header_row = self.get_header_row()
+        _header_row_number = _header_row[0]['row']
+        _data_row_start = _header_row_number + data_row_offset
         _data_structure = self.get_plc_data_structure(_header_row)
 
         for a_plc_range in _data_structure:
+            _value_column = a_plc_range['value']['column']
+            _value_column_span = a_plc_range['value']['column_span']
+            _address_column = a_plc_range['address']['column']
+            _address_column_span = a_plc_range['address']['column_span']
 
+            _plc_column_data = []
 
+            for a_row in self.sheet[_data_row_start - 1:]:
+                _value_cell = self.get_cell_in_row(a_row, _value_column)
+                _value_cell_value = self.concat_cell_values(_value_cell, _value_column_span)
+
+                _address_cell = self.get_cell_in_row(a_row, _address_column)
+                _address_cell_value = self.concat_cell_values(_address_cell, _address_column_span)
+
+                _plc_data = {
+                    'address':_address_cell_value,
+                    'value':_value_cell_value,
+                    'address_cell':_address_cell,
+                    'value_cell':_value_cell
+                }
+                _plc_column_data.append(_plc_data)
+            # end for
+
+            a_plc_range['plc_data'] = _plc_column_data
         # end for
         
-        return None
+        return _data_structure
 
     # end get_plc_data
+
+    def get_address_value_list(self, plc_data):
+        tuple_list = []
+        for i in plc_data:
+            tuple_list.append((i['address'], i['value']))
+        # end for
+        return tuple_list
+    # end get_address_value_list
+
+    def get_address_list(self, plc_data):
+        address_list = []
+        for i in plc_data:
+            address_list.append(i['address'])
+        # end for
+        return address_list
+    # end get_address_list
 
     def get_header_row(self):
         _header_cell = self.search_sheet(DATA_HEADER_FLAG)
         _header_row = self.get_row(_header_cell['row'])
         return _header_row
     # end get_header_row
+
+    def get_header_row_number(self):
+        _header_cell = self.search_sheet(DATA_HEADER_FLAG)
+        return _header_cell['row']
+    # end get_header_row_number
 
     def get_plc_data_structure(self, header_row):
         
@@ -122,22 +178,22 @@ class PLCSheetData(SheetDataBase):
         for a_cell in _header_row:
             _cell_value = a_cell['value']
             if _cell_value is not None:
-                if _cell_value.lower in _valid_types:
+                if _cell_value.lower() in _valid_types:
                     # save the column
 
                     # this is the cell that should have the address
                     _address_cell = self.get_cell(a_cell['row'], a_cell['column'] + self.config_data['ADDRESS OFFSET'])
-                    _address_span = _address_cell['col_span']
+                    _address_span = _address_cell['column_span']
                     _data_row_start = a_cell['row'] + self.config_data['DATA ROW OFFSET']
                     
                     _column_data = {
                         'value':{
                             'column':a_cell['column'],
-                            'col_span':a_cell['col_span']
+                            'column_span':a_cell['column_span']
                         },
                         'address': {
                             'column':_address_cell['column'],
-                            'col_span':_address_cell['col_span']
+                            'column_span':_address_cell['column_span']
                         },
                         'data': {
                             'type':_cell_value,
