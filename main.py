@@ -3,6 +3,8 @@ import filereader
 import serialize
 import threading
 import worker
+import getopt
+import sys
 
 PLC_OPERATION_DOWNLOAD = 0
 PLC_OPERATION_UPLOAD = 1
@@ -10,6 +12,12 @@ PLC_OPERATION_UPLOAD = 1
 OPC_SERVER = 'RSLinx OPC Server'
 
 if __name__ == '__main__':
+
+    # system arguments
+    sys_args = "f:s"
+
+    # print the arguments
+    getopt.getopt(sys.argv[1:], sys_args)
 
     # gets the full path of the excel file
     excel_file = os.getcwd() + "//RO Pinchart.xlsm"
