@@ -13,11 +13,19 @@ OPC_SERVER = 'RSLinx OPC Server'
 
 if __name__ == '__main__':
 
-    # system arguments
-    sys_args = "f:s"
+    # temporary user arguments
+    temp_user_args = ['-f', 'RO Pinchart.xlsm', '-o', 'DOWNLOAD', '-s', 'PINCHART-PROCESS, PINCHART-CIP']
 
+    # user arguments
+    #user_args = sys.argv[1:]
+    #print("user_args = %s" % user_args)
+
+    # system arguments possibilities
+    # f - filename
+    # o - operation
+    # s - sheet names - if this doesn't exist then we will assume all the sheets
     # print the arguments
-    getopt.getopt(sys.argv[1:], sys_args)
+    args = getopt.getopt(temp_user_args, "f:o:s:")
 
     # gets the full path of the excel file
     excel_file = os.getcwd() + "//RO Pinchart.xlsm"
