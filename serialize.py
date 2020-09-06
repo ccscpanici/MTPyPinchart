@@ -1,3 +1,5 @@
+import numpy
+import utils
 
 CONFIG_FLAG = "$Config$"
 DATA_HEADER_FLAG = "$HeaderRow$"
@@ -134,10 +136,19 @@ class PLCSheetData(SheetDataBase):
 
     # end get_plc_data
 
-    def get_address_value_list(self, plc_data):
+    def get_address_value_list(self, plc_data, data_type_string):
+        _value_type = data_type_string.lower()
         tuple_list = []
         for i in plc_data:
-            tuple_list.append((i['address'], i['value']))
+
+            # converts the value to the correct data type
+            _value = utils.data_converter(i['value'], data_type_string)
+
+            # if the address is None, we still have to append it to the
+            # values. This is because when we read the values back they
+            # are in the same order. The downloader should only get errors
+            # for the invalid tags. We should be ok
+            tuple_list.append((i['address'], _value))
         # end for
         return tuple_list
     # end get_address_value_list
