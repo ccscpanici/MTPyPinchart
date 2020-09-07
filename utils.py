@@ -65,7 +65,7 @@ def get_16bit_bin(decimal_number):
 
 # end get_16bit_bin
 
-def output(thread_id, class_name, method_name, message):
+def output(thread_id, class_name, method_name, message, thread_lock=None):
 
     # this keeps the output in the correct format
     now = datetime.now()
@@ -76,12 +76,21 @@ def output(thread_id, class_name, method_name, message):
     # string format
     time_format = "%H:%M:%S"
 
+    if thread_lock is not None:
+        # blocking call for the output thread
+        thread_lock.acquire()
+    # end if
+
     # HH:MM:SS (module.method) (message)
     try:
         print(now.strftime(time_format) + "\t" + thread_name + "\t" + class_name + "\t" + method_name + "\t" + message.upper())
     except UnicodeEncodeError as ex:
         print(now.strftime(time_format) + "\t" + thread_name + "\t" + class_name + "\t" + method_name + "\t" + "UNICODE ENCODE ERROR.")
     # end try/except
+
+    if thread_lock is not None:
+        thread_lock.release()
+    # end if
 # end output
 
 def data_converter(value, data_type_string):

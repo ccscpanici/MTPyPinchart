@@ -78,6 +78,13 @@ if __name__ == '__main__':
     # processor to process on different threads
     sheets_to_process = []
     
+    # this locks the output so if we 
+    # wanted to write the output to 
+    # a file, it would not error. This
+    # does make the program a little slower
+    # but we'll see how much.
+    slock = threading.Lock()
+
     # setup the thread locks.
     # excel lock
     elock = threading.Lock()
@@ -96,8 +103,7 @@ if __name__ == '__main__':
         raise Exception("Invalid Input for Operation: %s" % arg_operation)
     # end if
 
-
-    utils.output(THREAD_ID, "__main__", "__main__", "PREPPING SHEETS FOR PROCESSING.")
+    utils.output(THREAD_ID, "__main__", "__main__", "PREPPING SHEETS FOR PROCESSING.", slock)
 
     for sheet_name in excel_dict:
 
@@ -106,7 +112,7 @@ if __name__ == '__main__':
 
         if sheet_name.lower() == 'main program':
 
-            utils.output(THREAD_ID, "__main__", "__main__", "MAIN PROGRAM SHEET FOUND. EXTRACTING CONFIGURATION.")
+            utils.output(THREAD_ID, "__main__", "__main__", "MAIN PROGRAM SHEET FOUND. EXTRACTING CONFIGURATION.", slock)
 
             # serialized the main sheet into a class
             main_sheet = serialize.MainSheetData(sheet_data, "MAIN")
@@ -115,7 +121,7 @@ if __name__ == '__main__':
             # find the configuration, it uses default values.
             config_data = main_sheet.get_config_data()
 
-            utils.output(THREAD_ID, "__main__", "__main__", "CONFIGURATION FOUND: %s" % config_data)
+            utils.output(THREAD_ID, "__main__", "__main__", "CONFIGURATION FOUND: %s" % config_data, slock)
 
         elif (process_all_sheets or (sheet_name.lower() in arg_sheets)) \
             and sheet_name.lower() != "main program" and (sheet_name.lower().__contains__('plc') or \
@@ -125,12 +131,13 @@ if __name__ == '__main__':
             # thread
             sheets_to_process.append(
                 {
-                    'elock':elock,
-                    'opclock':olock,
-                    'sheet_name':sheet_name,
-                    'sheet_dict':sheet_data,
-                    'config_data':config_data,
-                    'operation':program_operation
+                    'elock': elock,
+                    'opclock': olock,
+                    'slock': slock,
+                    'sheet_name': sheet_name,
+                    'sheet_dict': sheet_data,
+                    'config_data': config_data,
+                    'operation': program_operation
                 }
             )
         # end if
@@ -139,7 +146,7 @@ if __name__ == '__main__':
     # loop through the sheets that need to get processed
     thread_id = 0
 
-    utils.output(THREAD_ID, "__main__", "__main__", "PUTTING TOGETHER SHEET PROCESSING THREADS.")
+    utils.output(THREAD_ID, "__main__", "__main__", "PUTTING TOGETHER SHEET PROCESSING THREADS.", slock)
     for sheet_process_data in sheets_to_process:
 
         # increment thread id
@@ -149,15 +156,10 @@ if __name__ == '__main__':
         #elock, opclock, sheet_name, sheet_dict, config_data, operation
             
         # process the sheet
-        #worker.process_sheet(a_sheet['elock'], a_sheet['opclock'], 
-        #                    a_sheet['sheet_name'], a_sheet['sheet_dict'], 
-        #                    a_sheet['config_data'], a_sheet['operation'], thread_id)
-
-        #, elock, opclock, sheet_name, sheet_dict, config_data, operation, thread_id
-
         t = threading.Thread(group=None, target=worker.process_sheet, args=(
             sheet_process_data['elock'],
             sheet_process_data['opclock'],
+            sheet_process_data['slock'],
             sheet_process_data['sheet_name'],
             sheet_process_data['sheet_dict'],
             sheet_process_data['config_data'],

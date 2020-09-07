@@ -5,9 +5,9 @@ from main import PLC_OPERATION_DOWNLOAD, PLC_OPERATION_UPLOAD, OPC_SERVER
 
 # # WORKER MODULE IS FOR PROCESSING A SHEETs
 # ON A SEPARATE THREAD
-def process_sheet(elock, opclock, sheet_name, sheet_dict, config_data, operation, thread_id):
+def process_sheet(elock, opclock, slock, sheet_name, sheet_dict, config_data, operation, thread_id):
     
-    utils.output(thread_id, "worker", "process_sheet", "PROCESSING SHEET %s" % sheet_name)
+    utils.output(thread_id, "worker", "process_sheet", "PROCESSING SHEET %s" % sheet_name, slock)
 
     # get the sheet serializer
     sheet_object = serialize.PLCSheetData(sheet_dict, config_data, thread_id)
@@ -15,7 +15,7 @@ def process_sheet(elock, opclock, sheet_name, sheet_dict, config_data, operation
     # gets the data row offset
     _data_row_offset = config_data['DATA ROW OFFSET']
 
-    utils.output(thread_id, "worker", "process_sheet", "GETTING PLC DATA...")
+    utils.output(thread_id, "worker", "process_sheet", "GETTING PLC DATA...", slock)
 
     # get the PLC data
     _plc_data = sheet_object.get_plc_data(_data_row_offset)
@@ -25,13 +25,13 @@ def process_sheet(elock, opclock, sheet_name, sheet_dict, config_data, operation
 
         if operation == PLC_OPERATION_UPLOAD or operation == PLC_OPERATION_DOWNLOAD:
             
-            utils.output(thread_id, "worker", "process_sheet", "AQUIRING OPC SYSTEM LOCK.")
+            utils.output(thread_id, "worker", "process_sheet", "AQUIRING OPC SYSTEM LOCK.", slock)
 
             opclock.acquire()
             #opc = OpenOPC.client()
             #opc.connect(OPC_SERVER)
 
-            utils.output(thread_id, "worker", "process_sheet", "CONNECTED TO OPC SERVER.")
+            utils.output(thread_id, "worker", "process_sheet", "CONNECTED TO OPC SERVER.", slock)
 
         if operation == PLC_OPERATION_DOWNLOAD:
 
