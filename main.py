@@ -5,6 +5,7 @@ import threading
 import worker
 import getopt
 import sys
+import utils
 
 PLC_OPERATION_DOWNLOAD = 0
 PLC_OPERATION_UPLOAD = 1
@@ -14,7 +15,13 @@ OPC_SERVER = 'RSLinx OPC Server'
 if __name__ == '__main__':
 
     # temporary user arguments
-    temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
+    #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
+    temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD']
+
+    # sets the thread-id
+    THREAD_ID = "MAIN"
+
+    utils.output(THREAD_ID, "__main__", "__main__", "PROCESSING USER ARGUMENTS.")
 
     # user arguments
     #user_args = sys.argv[1:]
@@ -54,13 +61,18 @@ if __name__ == '__main__':
         raise Exception("Must specify excel file and operation")
         sys.exit(1)
     # end if
+
     if not arg_sheets:
         arg_sheets = []
         process_all_sheets = True
     # end if
+
+    utils.output(THREAD_ID, "__main__", "__main__", "OPENPYXL - READING EXCEL FILE INTO MEMORY.")
     
     # gets all of the data from the workbook
     excel_dict = filereader.get_xl_data(arg_excel_file)
+
+    utils.output(THREAD_ID, "__main__", "__main__", "OPENPYXL - READING EXCEL FILE INTO MEMORY. COMPLETE.")
 
     # sheets to process list. These will be given to the sheet
     # processor to process on different threads
@@ -73,13 +85,19 @@ if __name__ == '__main__':
     # opc lock
     olock = threading.Lock()
 
+    # formulates the correct PLC OPERATION
     if arg_operation.lower() == "upload":
+        utils.output(THREAD_ID, "__main__", "__main__", "OPERATION SET TO UPLOAD.")
         program_operation = PLC_OPERATION_UPLOAD
     elif arg_operation.lower() == "download":
+        utils.output(THREAD_ID, "__main__", "__main__", "OPERATION SET TO DOWNLOAD.")
         program_operation = PLC_OPERATION_DOWNLOAD
     else:
         raise Exception("Invalid Input for Operation: %s" % arg_operation)
     # end if
+
+
+    utils.output(THREAD_ID, "__main__", "__main__", "PREPPING SHEETS FOR PROCESSING.")
 
     for sheet_name in excel_dict:
 
@@ -88,14 +106,20 @@ if __name__ == '__main__':
 
         if sheet_name.lower() == 'main program':
 
+            utils.output(THREAD_ID, "__main__", "__main__", "MAIN PROGRAM SHEET FOUND. EXTRACTING CONFIGURATION.")
+
             # serialized the main sheet into a class
-            main_sheet = serialize.MainSheetData(sheet_data)
+            main_sheet = serialize.MainSheetData(sheet_data, "MAIN")
 
             # gets the configutation dictionary for the workbook. If it doesn't
             # find the configuration, it uses default values.
             config_data = main_sheet.get_config_data()
 
-        elif process_all_sheets or (sheet_name.lower() in arg_sheets):
+            utils.output(THREAD_ID, "__main__", "__main__", "CONFIGURATION FOUND: %s" % config_data)
+
+        elif (process_all_sheets or (sheet_name.lower() in arg_sheets)) \
+            and sheet_name.lower() != "main program" and (sheet_name.lower().__contains__('plc') or \
+                sheet_name.lower().__contains__('pinchart')):
 
             # add the sheet name to process on a different
             # thread
@@ -114,18 +138,33 @@ if __name__ == '__main__':
 
     # loop through the sheets that need to get processed
     thread_id = 0
-    for a_sheet in sheets_to_process:
+
+    utils.output(THREAD_ID, "__main__", "__main__", "PUTTING TOGETHER SHEET PROCESSING THREADS.")
+    for sheet_process_data in sheets_to_process:
 
         # increment thread id
         thread_id = thread_id + 1
-        a_sheet['thread_id'] = thread_id
+        sheet_process_data['thread_id'] = thread_id
 
         #elock, opclock, sheet_name, sheet_dict, config_data, operation
-        
+            
         # process the sheet
-        worker.process_sheet(thread_id, a_sheet['elock'], a_sheet['opclock'], 
-                            a_sheet['sheet_name'], a_sheet['sheet_dict'], 
-                            a_sheet['config_data'], a_sheet['operation'])
+        #worker.process_sheet(a_sheet['elock'], a_sheet['opclock'], 
+        #                    a_sheet['sheet_name'], a_sheet['sheet_dict'], 
+        #                    a_sheet['config_data'], a_sheet['operation'], thread_id)
+
+        #, elock, opclock, sheet_name, sheet_dict, config_data, operation, thread_id
+
+        t = threading.Thread(group=None, target=worker.process_sheet, args=(
+            sheet_process_data['elock'],
+            sheet_process_data['opclock'],
+            sheet_process_data['sheet_name'],
+            sheet_process_data['sheet_dict'],
+            sheet_process_data['config_data'],
+            sheet_process_data['operation'],
+            sheet_process_data['thread_id']
+        ))
+        t.start()
 
     # end worker
 # end main

@@ -16,8 +16,9 @@ DEFAULT_CONFIG = {
 VALID_FIELD_TYPES = ['DINT DATA', 'DINT-32 DATA', 'INT DATA', 'INT-16 DATA', 'FLOAT DATA', 'STRING DATA']
 
 class SheetDataBase(object):
-    def __init__(self, sheet_dict):
+    def __init__(self, sheet_dict, thread_id):
         self.sheet = sheet_dict
+        self.thread_id = thread_id
     # end __init__()
 
     def search_sheet(self, value):
@@ -90,8 +91,8 @@ class SheetDataBase(object):
 
 class PLCSheetData(SheetDataBase):
 
-    def __init__(self, sheet_dict, config_data):
-        super(PLCSheetData, self).__init__(sheet_dict)
+    def __init__(self, sheet_dict, config_data, thread_id):
+        super(PLCSheetData, self).__init__(sheet_dict,thread_id)
         self.config_data = config_data
     # end __init__()
 

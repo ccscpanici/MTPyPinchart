@@ -1,4 +1,5 @@
 from datetime import datetime
+import utils
 import numpy
 
 # this function takes in a DINT and outputs a list
@@ -64,17 +65,20 @@ def get_16bit_bin(decimal_number):
 
 # end get_16bit_bin
 
-def output(thread_name, class_name, method_name, message):
+def output(thread_id, class_name, method_name, message):
 
     # this keeps the output in the correct format
     now = datetime.now()
+
+    # forumulates the thread name
+    thread_name = "THREAD-%s" % str(thread_id).upper()
 
     # string format
     time_format = "%H:%M:%S"
 
     # HH:MM:SS (module.method) (message)
     try:
-        print(now.strftime(time_format) + "\t" + thread_name + "\t" + class_name + "\t" + method_name + "\t" + message)
+        print(now.strftime(time_format) + "\t" + thread_name + "\t" + class_name + "\t" + method_name + "\t" + message.upper())
     except UnicodeEncodeError as ex:
         print(now.strftime(time_format) + "\t" + thread_name + "\t" + class_name + "\t" + method_name + "\t" + "UNICODE ENCODE ERROR.")
     # end try/except
