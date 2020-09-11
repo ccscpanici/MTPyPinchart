@@ -1,7 +1,8 @@
 import win32com.client as win32
+import utils
 class Interface(object):
 
-    def __init__(self, file_name, sheet_name):
+    def __init__(self, file_name, sheet_name=None):
 
         self.filename = file_name
         self.sheet_name = sheet_name
@@ -55,13 +56,56 @@ class Interface(object):
         
     # end load_workbook
 
-    def update_sheet(self, sheet_data):
+    def update_sheet(self, plc_data_column, config_data):
 
         # gets the workbook
         _workbook = self.get_workbook()
 
+        if self.sheet_name is None:
+            raise Exception("No sheet name specified")
+        # end if
+
         # gets the worksheet
-        _worksheet = _workbook[self.sheet_name]
+        _worksheet = _workbook.Worksheets(self.sheet_name)
+
+        # start updating the worksheet
+        _data_type = plc_data_column['data']['type']
+        
+        # loop through the PLC data
+        _plc_data = plc_data_column['plc_data']
+
+        for i in _plc_data:
+
+            _row = i['value_cell']['row']
+            _column = i['value_cell']['column']
+            _value = i['value']
+
+            if _data_type == "FLOAT DATA" or _data_type == "STRING DATA" or _data_type == "DINT DATA" or \
+                _data_type == "INT DATA":
+                # updates the value
+                _worksheet.Cells(_row, _column).Value = _value
+            elif _data_type == "DINT-32 DATA":
+
+                _start_column = _column + config_data['DINT-32 BITS OFFSET']
+                _end_column = _start_column + 32
+
+                # get the binary representation in a list
+                _bin = utils.get_32bit_bin(_value)
+
+                for i in range(0, 31):
+                    _bit_column = _start_column + i
+                    _bit_value = _bin[i]
+                    if _bit_value == 0:                    
+                        # update the bit
+                        _worksheet.Cells(_row, _bit_column).Value = ""
+                    else:
+                        _worksheet.Cells(_row, _bit_column).Value = _bit_value
+                # end for
+
+            elif _data_type == "INT-16 DATA":
+                pass
+            # end if
+        # end for
 
     # end update_sheet
 

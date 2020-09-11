@@ -114,9 +114,65 @@ class PLCSheetData(SheetDataBase):
     def __init__(self, sheet_dict, config_data, thread_id):
         super(PLCSheetData, self).__init__(sheet_dict,thread_id)
         self.config_data = config_data
+        self.opc_topic = None
     # end __init__()
 
-    def get_plc_data(self, data_row_offset, opc_topic=None):
+    def get_opc_topic(self):
+        return self.opc_topic
+    # end get_opc_topic
+
+    def set_opc_topic(self, value):
+        if self.opc_topic != value:
+            self.opc_topic = value
+        # end if
+    # end set_opc_topid
+
+    def get_plc_data_for_column(self, plc_data_column):
+
+        # returns dictionary of address
+        # and value, as well as the cell
+        # references.
+        _header_row = self.get_header_row()
+        _header_row_number = _header_row[0]['row']
+        _data_row_start = plc_data_column['data']['start_row']
+
+        _value_column = plc_data_column['value']['column']
+        _value_column_span = plc_data_column['value']['column_span']
+        _address_column = plc_data_column['address']['column']
+        _address_column_span = plc_data_column['address']['column_span']
+
+        _plc_column_data = []
+
+        for a_row in self.sheet[_data_row_start - 1:]:
+            _value_cell = self.get_cell_in_row(a_row, _value_column)
+            _value_cell_value = self.concat_cell_values(_value_cell, _value_column_span)
+
+            _address_cell = self.get_cell_in_row(a_row, _address_column)
+            _address_cell_value = self.concat_cell_values(_address_cell, _address_column_span)
+
+            _topic = self.get_opc_topic()
+            if _topic is not None:
+                _full_address = "[%s]%s" % (_topic, _address_cell_value.strip())
+            else:
+                _full_address = _address_cell_value.strip()
+            # end if
+
+            _plc_data = {
+                'address':_full_address,
+                'value':_value_cell_value,
+                'address_cell':_address_cell,
+                'value_cell':_value_cell,
+                'full_address':_full_address
+            }
+
+            _plc_column_data.append(_plc_data)
+        # end for
+        
+        return _plc_column_data
+
+    # end get_plc_data_for_column
+
+    def get_plc_data(self, data_row_offset):
 
         # returns dictionary of address
         # and value, as well as the cell
@@ -141,14 +197,15 @@ class PLCSheetData(SheetDataBase):
                 _address_cell = self.get_cell_in_row(a_row, _address_column)
                 _address_cell_value = self.concat_cell_values(_address_cell, _address_column_span)
 
-                if opc_topic is not None:
-                    _full_address = "[%s]%s" % (opc_topic, _address_cell_value)
+                _topic = self.get_opc_topic()
+                if _topic is not None:
+                    _full_address = "[%s]%s" % (_topic, _address_cell_value.strip())
                 else:
-                    _full_address = _address_cell_value
+                    _full_address = _address_cell_value.strip()
                 # end if
 
                 _plc_data = {
-                    'address':_address_cell_value,
+                    'address':_full_address,
                     'value':_value_cell_value,
                     'address_cell':_address_cell,
                     'value_cell':_value_cell,
@@ -164,7 +221,7 @@ class PLCSheetData(SheetDataBase):
 
     # end get_plc_data
 
-    def get_address_value_list(self, plc_data, data_type_string, opc_topic=None):
+    def get_address_value_list(self, plc_data, data_type_string):
         # takes in the plc data, converts the values,
         # and puts them in a list of tuples to be written to
         # the opc server.
@@ -180,29 +237,16 @@ class PLCSheetData(SheetDataBase):
             # are in the same order. The downloader should only get errors
             # for the invalid tags. We should be ok
             _address = i['address']
-            if opc_topic is not None:
-                _full_address = "[%s]%s" % (opc_topic.strip(), _address.strip())
-            else:
-                _full_address = _address.strip()
-            # end if
-            tuple_list.append((_full_address, _value))
+            tuple_list.append((_address, _value))
         # end for
         return tuple_list
     # end get_address_value_list
 
-    def get_address_list(self, plc_data, opc_topic=None):
+    def get_address_list(self, plc_data):
         address_list = []
         for i in plc_data:
-
             _address = i['address']
-
-            if opc_topic is not None:
-                _full_address = "[%s]%s" % (opc_topic.strip(), _address.strip())
-            else:
-                _full_address = _address.strip()
-            # end if
-
-            address_list.append(_full_address)
+            address_list.append(_address)
         # end for
         return address_list
     # end get_address_list
@@ -218,8 +262,8 @@ class PLCSheetData(SheetDataBase):
         return _header_cell['row']
     # end get_header_row_number
 
-    def get_plc_data_structure(self, header_row):
-        
+    def get_plc_data_structure(self):
+
         # plc data value columns
         _columns = []
 
@@ -282,16 +326,21 @@ class PLCSheetData(SheetDataBase):
         return _columns
     # end get_plc_value_column_numbers
 
-    def update_data_with_new_values(self, plc_data_column, new_values_from_opc):
+    def update_data_with_new_values(self, data_type, plc_data, new_values_from_opc):
         _data_index = 0
         for address, value, quality, timestamp in new_values_from_opc:
-            if plc_data_column[_data_index]['address'] == address:
-                plc_data_column[_data_index]['value'] = value
+
+            _plc_data_item = plc_data[_data_index]
+            _value = utils.data_converter(_plc_data_item['value'], data_type)
+
+            if _plc_data_item['address'] == address:
+                plc_data[_data_index]['value'] = _value
             else:
                 raise Exception("Data out of sync.")
             # end if
+            _data_index = _data_index + 1
         # end for
-        return plc_data_column
+        return plc_data
     # end update_data_with_new_values
 # end PLCSheetData
 

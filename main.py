@@ -6,6 +6,8 @@ import worker
 import getopt
 import sys
 import utils
+import time
+import excel_interface
 
 PLC_OPERATION_DOWNLOAD = 0
 PLC_OPERATION_UPLOAD = 1
@@ -14,7 +16,7 @@ PLC_OPERATION_EXPORT = 3
 
 # USE THIS BOOL TO TURN MULTITHREADED
 # ON AND OFF
-MULTITHREAD = False
+MULTITHREAD = True
 
 OPC_SERVER = 'RSLinx OPC Server'
 
@@ -161,6 +163,8 @@ if __name__ == '__main__':
     thread_id = 0
 
     utils.output(THREAD_ID, "__main__", "__main__", "PUTTING TOGETHER SHEET PROCESSING THREADS.", slock)
+
+    sheet_threads = []
     for sheet_process_data in sheets_to_process:
 
         #elock, opclock, sheet_name, sheet_dict, config_data, operation
@@ -187,6 +191,7 @@ if __name__ == '__main__':
             # process the sheet
             t = threading.Thread(group=None, target=worker.process_sheet, args=_worker_arguments)
             t.start()
+            sheet_threads.append(t)
 
         else:
 
@@ -205,4 +210,21 @@ if __name__ == '__main__':
             )
         # end if
     # end worker
+    
+    if MULTITHREAD:
+        while worker.threads_running(sheet_threads) > 0:
+            time.sleep(0.5)
+        # end while
+    # end if
+
+    # if there was an upload - save the workbook
+    if program_operation == PLC_OPERATION_UPLOAD:
+        elock.acquire()
+        utils.output("MAIN", "__main__", "__main__", "Saving workbook after upload.")
+        xl = excel_interface.Interface(arg_excel_file)
+        xl.save_workbook()
+        elock.release()
+    # end if
+    
+    utils.output("MAIN", "__main__", "__main__", "System Complete.")
 # end main
