@@ -9,6 +9,8 @@ import utils
 
 PLC_OPERATION_DOWNLOAD = 0
 PLC_OPERATION_UPLOAD = 1
+workPLC_OPERATION_IMPORT = 2
+PLC_OPERATION_EXPORT = 3
 
 OPC_SERVER = 'RSLinx OPC Server'
 
@@ -21,7 +23,21 @@ if __name__ == '__main__':
     # sets the thread-id
     THREAD_ID = "MAIN"
 
-    utils.output(THREAD_ID, "__main__", "__main__", "PROCESSING USER ARGUMENTS.")
+    # this locks the output so if we 
+    # wanted to write the output to 
+    # a file, it would not error. This
+    # does make the program a little slower
+    # but we'll see how much.
+    slock = threading.Lock()
+
+    # setup the thread locks.
+    # excel lock
+    elock = threading.Lock()
+
+    # opc lock
+    olock = threading.Lock()
+
+    utils.output(THREAD_ID, "__main__", "__main__", "PROCESSING USER ARGUMENTS.", slock)
 
     # user arguments
     #user_args = sys.argv[1:]
@@ -67,31 +83,17 @@ if __name__ == '__main__':
         process_all_sheets = True
     # end if
 
-    utils.output(THREAD_ID, "__main__", "__main__", "OPENPYXL - READING EXCEL FILE INTO MEMORY.")
+    utils.output(THREAD_ID, "__main__", "__main__", "OPENPYXL - READING EXCEL FILE INTO MEMORY.", slock)
     
     # gets all of the data from the workbook
     excel_dict = filereader.get_xl_data(arg_excel_file)
 
-    utils.output(THREAD_ID, "__main__", "__main__", "OPENPYXL - READING EXCEL FILE INTO MEMORY. COMPLETE.")
+    utils.output(THREAD_ID, "__main__", "__main__", "OPENPYXL - READING EXCEL FILE INTO MEMORY. COMPLETE.", slock)
 
     # sheets to process list. These will be given to the sheet
     # processor to process on different threads
     sheets_to_process = []
     
-    # this locks the output so if we 
-    # wanted to write the output to 
-    # a file, it would not error. This
-    # does make the program a little slower
-    # but we'll see how much.
-    slock = threading.Lock()
-
-    # setup the thread locks.
-    # excel lock
-    elock = threading.Lock()
-
-    # opc lock
-    olock = threading.Lock()
-
     # formulates the correct PLC OPERATION
     if arg_operation.lower() == "upload":
         utils.output(THREAD_ID, "__main__", "__main__", "OPERATION SET TO UPLOAD.")
