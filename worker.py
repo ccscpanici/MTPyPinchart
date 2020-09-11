@@ -1,6 +1,7 @@
 import OpenOPC
 import serialize
 import utils
+import excel_interface
 from main import PLC_OPERATION_DOWNLOAD, PLC_OPERATION_UPLOAD, PLC_OPERATION_EXPORT, PLC_OPERATION_IMPORT, OPC_SERVER
 
 # # WORKER MODULE IS FOR PROCESSING A SHEETs
@@ -62,20 +63,29 @@ def process_sheet(elock, opclock, slock, pc5lock, main_sheet_object, \
             # gets the address list for upload
             addresses = sheet_object.get_address_list(plc_data_column['plc_data'], _topic)
 
-            #return_data = opc.read(addresses)
+            #_return_data = opc.read(addresses)
+            _return_data = None
             opclock.release()
             
-            # process the return data
+            # process the return data, if there are a bunch
+            # of errors, maybe kick it out?
+            new_plc_data_column = sheet_object.update_data_with_new_values(plc_data_column, _return_data)
+
+            # update the plc_data in the master sheet
+            
 
             # lock the execl
             elock.acquire()
 
             # create the win32com excel interface class
+            _excel = excel_interface.Interface(full_file_path, sheet_name)
 
             # hand the interface class the data that needs 
             # to be updated
+            _excel.update_sheet(_return_data)
 
             # save the workbook
+            _excel.save_workbook()
 
             # after it is all updated, release the lock
             elock.release()

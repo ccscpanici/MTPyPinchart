@@ -281,6 +281,18 @@ class PLCSheetData(SheetDataBase):
         # end for
         return _columns
     # end get_plc_value_column_numbers
+
+    def update_data_with_new_values(self, plc_data_column, new_values_from_opc):
+        _data_index = 0
+        for address, value, quality, timestamp in new_values_from_opc:
+            if plc_data_column[_data_index]['address'] == address:
+                plc_data_column[_data_index]['value'] = value
+            else:
+                raise Exception("Data out of sync.")
+            # end if
+        # end for
+        return plc_data_column
+    # end update_data_with_new_values
 # end PLCSheetData
 
 class MainSheetData(SheetDataBase):

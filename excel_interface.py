@@ -64,5 +64,11 @@ class Interface(object):
         _worksheet = _workbook[self.sheet_name]
 
     # end update_sheet
+
+    def save_workbook(self):
+        _workbook = self.get_workbook()
+        _workbook.Save()
+    # end save_workbook
+    
 # end Interface
 
