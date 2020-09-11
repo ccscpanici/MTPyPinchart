@@ -118,7 +118,7 @@ def data_converter(value, data_type_string):
         # end if
     elif _dt_string == "string":
         if value is not None:
-            _converted = str(value)
+            _converted = str(value).strip()
         else:
             _converted = ""
         # end if

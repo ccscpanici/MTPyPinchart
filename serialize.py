@@ -5,6 +5,8 @@ CONFIG_FLAG = "$Config$"
 DATA_HEADER_FLAG = "$HeaderRow$"
 OPC_TOPIC_FLAG = "OPC Topic"
 OPC_TOPIC_OFFSET = 1
+SLC_FILE_FLAG = "PC5 File"
+SLC_FILE_OFFSET = 1
 
 DEFAULT_CONFIG = {
     "ADDRESS OFFSET" : 1,              # offset from the value column
@@ -34,6 +36,24 @@ class SheetDataBase(object):
         # end for
         return False
     # end search sheet
+
+    def get_search_offset_value(self, search_string, row_offset=0, col_offset=0):
+
+        # gets the first cell searching for the string
+        # that we need
+        _cell1 = self.search_sheet(search_string)
+
+        # if the search function returns false, then this function
+        # returns none
+        if not _cell1:
+            return None
+        else:
+            # if the search function does not return false, then we get the
+            # second cell with the offsets and return the cell value
+            _cell2 = self.get_cell(_cell1['row'] + row_offset, _cell1['column'] + col_offset)
+            return _cell2['value']
+        # end if
+    # end get_search_offset_value
 
     def concat_cell_values(self, first_cell, span, delimiter=""):
         # this method concatinates the first_cell value
@@ -96,11 +116,11 @@ class PLCSheetData(SheetDataBase):
         self.config_data = config_data
     # end __init__()
 
-    def get_plc_data(self, data_row_offset):
+    def get_plc_data(self, data_row_offset, opc_topic=None):
+
         # returns dictionary of address
         # and value, as well as the cell
         # references.
-
         _header_row = self.get_header_row()
         _header_row_number = _header_row[0]['row']
         _data_row_start = _header_row_number + data_row_offset
@@ -121,11 +141,18 @@ class PLCSheetData(SheetDataBase):
                 _address_cell = self.get_cell_in_row(a_row, _address_column)
                 _address_cell_value = self.concat_cell_values(_address_cell, _address_column_span)
 
+                if opc_topic is not None:
+                    _full_address = "[%s]%s" % (opc_topic, _address_cell_value)
+                else:
+                    _full_address = _address_cell_value
+                # end if
+
                 _plc_data = {
                     'address':_address_cell_value,
                     'value':_value_cell_value,
                     'address_cell':_address_cell,
-                    'value_cell':_value_cell
+                    'value_cell':_value_cell,
+                    'full_address':_full_address
                 }
                 _plc_column_data.append(_plc_data)
             # end for
@@ -137,7 +164,10 @@ class PLCSheetData(SheetDataBase):
 
     # end get_plc_data
 
-    def get_address_value_list(self, plc_data, data_type_string):
+    def get_address_value_list(self, plc_data, data_type_string, opc_topic=None):
+        # takes in the plc data, converts the values,
+        # and puts them in a list of tuples to be written to
+        # the opc server.
         _value_type = data_type_string.lower()
         tuple_list = []
         for i in plc_data:
@@ -149,15 +179,30 @@ class PLCSheetData(SheetDataBase):
             # values. This is because when we read the values back they
             # are in the same order. The downloader should only get errors
             # for the invalid tags. We should be ok
-            tuple_list.append((i['address'], _value))
+            _address = i['address']
+            if opc_topic is not None:
+                _full_address = "[%s]%s" % (opc_topic.strip(), _address.strip())
+            else:
+                _full_address = _address.strip()
+            # end if
+            tuple_list.append((_full_address, _value))
         # end for
         return tuple_list
     # end get_address_value_list
 
-    def get_address_list(self, plc_data):
+    def get_address_list(self, plc_data, opc_topic=None):
         address_list = []
         for i in plc_data:
-            address_list.append(i['address'])
+
+            _address = i['address']
+
+            if opc_topic is not None:
+                _full_address = "[%s]%s" % (opc_topic.strip(), _address.strip())
+            else:
+                _full_address = _address.strip()
+            # end if
+
+            address_list.append(_full_address)
         # end for
         return address_list
     # end get_address_list
@@ -242,25 +287,41 @@ class MainSheetData(SheetDataBase):
 
     config_data = None
     opc_topic = None
+    slc_file = None
 
     def get_config_cell(self):
         return self.search_sheet(CONFIG_FLAG)
     # end get_config_cell
 
     def get_opc_topic(self):
+
         if self.opc_topic is None:
-            # search for the flag
-            _cell1 = self.search_sheet(OPC_TOPIC_FLAG)
-            _cell2 = self.get_cell(_cell1['row'], _cell1['column'] + OPC_TOPIC_OFFSET)
-            _value = _cell2['value']
-            if _value is not None:
-                self.opc_topic = _value
+            # gets the topic value
+            _topic = self.get_search_offset_value(OPC_TOPIC_FLAG, 0, OPC_TOPIC_OFFSET)
+
+            if _topic is not None and _topic != "":
+                self.opc_topic = _topic
             else:
-                raise Exception("Could not locate valid OPC Topic in sheet.")
-            # end if
+                raise Exception("Could not locate valid OPC topic in MAIN PROGRAM sheet.")
         # end if
+
         return self.opc_topic
     # end get_opc_topic
+
+    def get_pc5_file(self):
+
+        if self.slc_file is None:
+            _slc_file = self.get_search_offset_value(SLC_FILE_FLAG, 0, SLC_FILE_OFFSET)
+
+            if _slc_file is not None and _slc_file != "":
+                self.slc_file = _slc_file
+            else:
+                raise Exception("Could not locate valid SLC in MAIN PROGRAM sheet")
+            # end if
+        # end if
+
+        return self.slc_file
+    # end get_slc_file
 
     def get_config_data(self):
         if self.config_data is None:
@@ -330,34 +391,3 @@ class MainSheetData(SheetDataBase):
         return True
     # end validate_configuration_data
 # end class
-
-# if __name__ == '__main__':
-
-#     import filereader
-#     import os
-
-#     file = os.getcwd() + "\\RO Pinchart.xlsm"
-
-#     print("Loading workbook....")
-#     # gets a dictionary of the whole workbook
-#     workbook = filereader.get_xl_data(file)
-#     print("Loading workbook....Done.")
-    
-#     # get the sheet names
-#     sheet_names = list(workbook.keys())
-
-#     _sheet_name = sheet_names[0]
-
-#     if _sheet_name.lower() == 'main program':
-#         _sheet_data = workbook[_sheet_name]
-#         _sheet_object = MainSheetData(_sheet_data)
-
-#         _config_data = _sheet_object.get_config_data()
-#         _config_data = _sheet_object.process_configuration_data(_config_data)
-#         if not _sheet_object.validate_configuration_data(_config_data):
-#             print("we're all fucked.")
-#         else:
-#             print("looks. Good.")
-#         # end if
-#         print(_config_data)
-#         print(_sheet_object.get_opc_topic())

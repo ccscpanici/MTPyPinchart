@@ -9,8 +9,12 @@ import utils
 
 PLC_OPERATION_DOWNLOAD = 0
 PLC_OPERATION_UPLOAD = 1
-workPLC_OPERATION_IMPORT = 2
+PLC_OPERATION_IMPORT = 2
 PLC_OPERATION_EXPORT = 3
+
+# USE THIS BOOL TO TURN MULTITHREADED
+# ON AND OFF
+MULTITHREAD = False
 
 OPC_SERVER = 'RSLinx OPC Server'
 
@@ -18,7 +22,7 @@ if __name__ == '__main__':
 
     # temporary user arguments
     #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
-    temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD']
+    temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'UPLOAD']
 
     # sets the thread-id
     THREAD_ID = "MAIN"
@@ -36,6 +40,11 @@ if __name__ == '__main__':
 
     # opc lock
     olock = threading.Lock()
+
+    # PC5 file lock - this protects
+    # the PC5 file from getting overwritten
+    # by other threads
+    pc5lock = threading.Lock()
 
     utils.output(THREAD_ID, "__main__", "__main__", "PROCESSING USER ARGUMENTS.", slock)
 
@@ -136,10 +145,13 @@ if __name__ == '__main__':
                     'elock': elock,
                     'opclock': olock,
                     'slock': slock,
+                    'pc5lock': pc5lock,
+                    'main_sheet_object': main_sheet,
                     'sheet_name': sheet_name,
                     'sheet_dict': sheet_data,
                     'config_data': config_data,
-                    'operation': program_operation
+                    'operation': program_operation,
+                    'full_file_path': arg_excel_file
                 }
             )
         # end if
@@ -151,24 +163,46 @@ if __name__ == '__main__':
     utils.output(THREAD_ID, "__main__", "__main__", "PUTTING TOGETHER SHEET PROCESSING THREADS.", slock)
     for sheet_process_data in sheets_to_process:
 
-        # increment thread id
-        thread_id = thread_id + 1
-        sheet_process_data['thread_id'] = thread_id
-
         #elock, opclock, sheet_name, sheet_dict, config_data, operation
-            
-        # process the sheet
-        t = threading.Thread(group=None, target=worker.process_sheet, args=(
-            sheet_process_data['elock'],
-            sheet_process_data['opclock'],
-            sheet_process_data['slock'],
-            sheet_process_data['sheet_name'],
-            sheet_process_data['sheet_dict'],
-            sheet_process_data['config_data'],
-            sheet_process_data['operation'],
-            sheet_process_data['thread_id']
-        ))
-        t.start()
+        if MULTITHREAD:
 
+            # increment thread id
+            thread_id = thread_id + 1
+            sheet_process_data['thread_id'] = thread_id
+
+            _worker_arguments = (
+                sheet_process_data['elock'],
+                sheet_process_data['opclock'],
+                sheet_process_data['slock'],
+                sheet_process_data['pc5lock'],
+                sheet_process_data['main_sheet_object'],
+                sheet_process_data['sheet_name'],
+                sheet_process_data['sheet_dict'],
+                sheet_process_data['config_data'],
+                sheet_process_data['operation'],
+                sheet_process_data['thread_id'],
+                sheet_process_data['full_file_path']
+            )
+
+            # process the sheet
+            t = threading.Thread(group=None, target=worker.process_sheet, args=_worker_arguments)
+            t.start()
+
+        else:
+
+            worker.process_sheet(
+                sheet_process_data['elock'],
+                sheet_process_data['opclock'],
+                sheet_process_data['slock'],
+                sheet_process_data['pc5lock'],
+                sheet_process_data['main_sheet_object'],
+                sheet_process_data['sheet_name'],
+                sheet_process_data['sheet_dict'],
+                sheet_process_data['config_data'],
+                sheet_process_data['operation'],
+                "MAIN",
+                sheet_process_data['full_file_path']
+            )
+        # end if
     # end worker
 # end main

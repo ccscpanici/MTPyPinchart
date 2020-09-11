@@ -1,7 +1,7 @@
 import win32com.client as win32
 class Interface(object):
 
-    def __init__(self, file_name, sheet_name, sheet_data):
+    def __init__(self, file_name, sheet_name):
 
         self.filename = file_name
         self.sheet_name = sheet_name
@@ -19,41 +19,49 @@ class Interface(object):
         # end if
     # end get_app()
 
-    def get_workbook(self, app_instance):
+    def get_workbook(self):
 
-        # grabs the workbook if it is running
-        # or not open, then it opens it
-        # self.workbook = blah
-        _found_workbook = False
-        
-        # figure out if the workbook is already open
-        if app_instance.Workbooks.Count > 0:
-            for i in range(1, app_instance.Workbooks.Count + 1):
-                if app_instance.Workbooks.Item(i).FullName == self.filename:
-                    _workbook = app_instance.Workbooks.Item(i)
-                    _found_workbook = True
-                    break
-                else:
-                    continue
-                # end if
-            # end for
+        if self.workbook is None:
+            # gets the application instance
+            _app_instance = self.get_app()
+
+            # grabs the workbook if it is running
+            # or not open, then it opens it
+            # self.workbook = blah
+            _found_workbook = False
+            
+            # figure out if the workbook is already open
+            if _app_instance.Workbooks.Count > 0:
+                for i in range(1, _app_instance.Workbooks.Count + 1):
+                    if _app_instance.Workbooks.Item(i).FullName == self.filename:
+                        _workbook = _app_instance.Workbooks.Item(i)
+                        _found_workbook = True
+                        break
+                    else:
+                        continue
+                    # end if
+                # end for
+            # end if
+
+            # if it did not find the workbook, then open it
+            if not _found_workbook:
+                _workbook = _app_instance.Workbooks.Open(self.filename)
+            # end if
+
+            self.workbook = _workbook
         # end if
 
-        # if it did not find the workbook, then open it
-        if not _found_workbook:
-            _workbook = app_instance.Workbooks.Open(self.filename)
-        # end if
-        else:
-            _workbook = app_instance.Workbooks.Open(self.filename)
-        # end if
-
-        return _workbook
+        return self.workbook
         
     # end load_workbook
 
     def update_sheet(self, sheet_data):
 
-        pass
+        # gets the workbook
+        _workbook = self.get_workbook()
+
+        # gets the worksheet
+        _worksheet = _workbook[self.sheet_name]
 
     # end update_sheet
 # end Interface
