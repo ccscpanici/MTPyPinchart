@@ -127,3 +127,18 @@ def data_converter(value, data_type_string):
     # end if
     return _converted
 # end validate_data_value
+
+def clean_int_list(a_list):
+    # this function takes in a list
+    # and returns a cleaner version
+    # of it.
+    return_list = []
+    for i in a_list:
+        try:
+            return_list.append(int(i))
+        except:
+            continue
+        # end try
+    # end for
+    return return_list
+# end clean_int_list

@@ -370,10 +370,8 @@ class MainSheetData(SheetDataBase):
     # end get_opc_topic
 
     def get_pc5_file(self):
-
         if self.slc_file is None:
             _slc_file = self.get_search_offset_value(SLC_FILE_FLAG, 0, SLC_FILE_OFFSET)
-
             if _slc_file is not None and _slc_file != "":
                 self.slc_file = _slc_file
             else:

@@ -16,7 +16,7 @@ PLC_OPERATION_EXPORT = 3
 
 # USE THIS BOOL TO TURN MULTITHREADED
 # ON AND OFF
-MULTITHREAD = True
+MULTITHREAD = False
 
 OPC_SERVER = 'RSLinx OPC Server'
 
@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     # temporary user arguments
     #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
-    temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'UPLOAD']
+    temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'IMPORT']
 
     # sets the thread-id
     THREAD_ID = "MAIN"

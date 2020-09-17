@@ -3,6 +3,7 @@ import serialize
 import utils
 import excel_interface
 import pywintypes
+import pc5_interface
 from main import PLC_OPERATION_DOWNLOAD, PLC_OPERATION_UPLOAD, PLC_OPERATION_EXPORT, PLC_OPERATION_IMPORT, OPC_SERVER
 
 pywintypes.datetime = pywintypes.TimeType
@@ -76,6 +77,11 @@ def process_sheet(elock, opclock, slock, pc5lock, main_sheet_object, \
             # lock the file
             pc5lock.aquire()
 
+            # read the pc5 file
+            pc5 = pc5_interface.PC5_File(_pc5_file)
+
+            # release the pc5 file lock
+
         # end if
 
         if operation == PLC_OPERATION_DOWNLOAD:
@@ -147,7 +153,6 @@ def process_sheet(elock, opclock, slock, pc5lock, main_sheet_object, \
         elif operation == PLC_OPERATION_IMPORT:
 
             # import the data from the file
-            pass
 
             # release the lock
             pc5lock.release()
