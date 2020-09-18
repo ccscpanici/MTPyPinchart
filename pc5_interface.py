@@ -112,7 +112,7 @@ class PC5_File(object):
         # off and get just the address.
         if address.__contains__("]"):
             _address_withou_topic = address.split("]")[1]
-            if self.__data_table__.has_key(_address_withou_topic):
+            if _address_withou_topic in self.__data_table__:
                 return self.__data_table__[address.split("]")[1]]
             else:
                 #output(self.__class__.__name__, "get_plc_value", "ERROR: Address not found in program: %s" % _address_withou_topic)
@@ -122,16 +122,17 @@ class PC5_File(object):
         # end if
     # end get_plc_value
 
-    def get_plc_values(self, plc_data):
+    def get_plc_values(self, plc_data_column):
         # this method gets all of the plc_data
         # and adds it to the dictionary. Then,
         # returns the dictionary so the excel sheet
         # can be updated
-        for _column in plc_data.keys():
-            _column_data = plc_data[_column]
-            for _row in _column_data:
-                _row['value'] = self.get_plc_value(_row['address'])
-            # end for
+        plc_data = plc_data_column['plc_data']
+
+        for _item in plc_data:
+
+            # gets the data from the plc data tables
+            _item['value'] = self.get_plc_value(_item['address'])    
         # end for
         return plc_data
     # end get_plc_values
@@ -241,10 +242,3 @@ class PC5_File(object):
             return False
         # end try
 # end SLC_File
-
-if __name__ == '__main__':
-
-    _file = "Pinchart.PC5"
-    pc5 = PC5_File(_file)
-
-    print(pc5)

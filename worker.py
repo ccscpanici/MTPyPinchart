@@ -50,7 +50,8 @@ def process_sheet(elock, opclock, slock, pc5lock, main_sheet_object, \
         # end if
 
         if operation == PLC_OPERATION_UPLOAD or operation == PLC_OPERATION_DOWNLOAD:
-
+                
+            # OPC RELATED OPERATIONS
             # get the topic from the main sheet
             _topic = main_sheet_object.get_opc_topic()
 
@@ -70,17 +71,28 @@ def process_sheet(elock, opclock, slock, pc5lock, main_sheet_object, \
         # end if
 
         if operation == PLC_OPERATION_IMPORT or operation == PLC_OPERATION_EXPORT:
-
+                
+            # PC5 FILE OPERATIONS
             # get the PLC file
             _pc5_file = main_sheet_object.get_pc5_file()
 
             # lock the file
-            pc5lock.aquire()
+            pc5lock.acquire()
 
             # read the pc5 file
             pc5 = pc5_interface.PC5_File(_pc5_file)
 
             # release the pc5 file lock
+            pc5lock.release()
+
+            # get the plc data for the column. We don't need to set an opc topic
+            plc_data_column['plc_data'] = sheet_object.get_plc_data_for_column(plc_data_column)
+
+            # make sure that the file is a PLC-5 or SLC type address pattern.
+            # if it is not, then we need to raise an error
+            if plc_data_column['plc_data'][0]['address'].__contains__(":") == False:
+                raise Exception("OPERATION IS NOT FOR A CONTROL LOGIX DATA STRUCTURE.")
+            # end if
 
         # end if
 
@@ -120,7 +132,9 @@ def process_sheet(elock, opclock, slock, pc5lock, main_sheet_object, \
             utils.output(thread_id, "worker", "process_sheet", "%s-GETTING UPLOADING DATA CHUNK..." % sheet_name, slock)
             
             try:
+                
                 _return_data = opc.read(addresses)
+
             except Exception as ex:
                 _return_data = None
                 utils.output(thread_id, "worker", "process_sheet", "UNHANDLED ERROR: %s" % ex, slock)
@@ -152,12 +166,30 @@ def process_sheet(elock, opclock, slock, pc5lock, main_sheet_object, \
 
         elif operation == PLC_OPERATION_IMPORT:
 
-            # import the data from the file
+            # import the data from the file.
+            # updates the dictionary
+            plc_data_column['plc_data'] = pc5.get_plc_values(plc_data_column)
 
-            # release the lock
-            pc5lock.release()
+            # lock the execl
+            elock.acquire()
 
+            # create the win32com excel interface class
+            utils.output(thread_id, "worker", "process_sheet", "%s-GETTING WORKBOOK..." % sheet_name, slock)
+            _excel = excel_interface.Interface(full_file_path, sheet_name)
+
+            # hand the interface class the data that needs 
+            # to be updated
+            utils.output(thread_id, "worker", "process_sheet", "%s-UPDATING WORKSHEET WITH DATA CHUNK..." % sheet_name, slock)
+            _excel.update_sheet(plc_data_column, config_data)
+
+            # after it is all updated, release the lock
+            elock.release()
+            
         elif operation == PLC_OPERATION_EXPORT:
+
+            # lock the pc5 file so we can write to
+            # it.
+            pc5lock.acquire()
 
             # export the operation from the sheet
             # to the PC5 file

@@ -1,5 +1,6 @@
 import win32com.client as win32
 import utils
+import pythoncom
 class Interface(object):
 
     def __init__(self, file_name, sheet_name=None):
@@ -15,7 +16,10 @@ class Interface(object):
         if self.app is not None:
             return self.app
         else:
+            # not sure if this will screw everything up
+            #pythoncom.CoInitialize()
             self.app = win32.gencache.EnsureDispatch("Excel.Application")
+            self.app.Visible = True
             return self.app
         # end if
     # end get_app()
@@ -84,6 +88,7 @@ class Interface(object):
                 _data_type == "INT DATA":
                 # updates the value
                 _worksheet.Cells(_row, _column).Value = _value
+                
             elif _data_type == "DINT-32 DATA":
 
                 _start_column = _column + config_data['DINT-32 BITS OFFSET']
@@ -92,7 +97,7 @@ class Interface(object):
                 # get the binary representation in a list
                 _bin = utils.get_32bit_bin(_value)
 
-                for i in range(0, 31):
+                for i in range(0, 32):
                     _bit_column = _start_column + i
                     _bit_value = _bin[i]
                     if _bit_value == 0:                    
@@ -100,9 +105,26 @@ class Interface(object):
                         _worksheet.Cells(_row, _bit_column).Value = ""
                     else:
                         _worksheet.Cells(_row, _bit_column).Value = _bit_value
+                    # end if
                 # end for
 
             elif _data_type == "INT-16 DATA":
+
+                _start_column = _column + config_data['INT-16 BITS OFFSET']
+                _end_column = _start_column + 16
+
+                # get the binary representation in a list
+                _bin = utils.get_16bit_bin(_value)
+
+                for i in range(0, 16):
+                    _bit_column = _start_column + i
+                    _bit_value = _bin[i]
+                    if _bit_value == 0:
+                        # update the bit
+                        _worksheet.Cells(_row, _bit_column).Value = ""
+                    else:
+                        _worksheet.Cells(_row, _bit_column).Value = _bit_value
+                    # end if
                 pass
             # end if
         # end for

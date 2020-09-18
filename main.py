@@ -16,7 +16,7 @@ PLC_OPERATION_EXPORT = 3
 
 # USE THIS BOOL TO TURN MULTITHREADED
 # ON AND OFF
-MULTITHREAD = False
+MULTITHREAD = True
 
 OPC_SERVER = 'RSLinx OPC Server'
 
@@ -24,7 +24,8 @@ if __name__ == '__main__':
 
     # temporary user arguments
     #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
-    temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'IMPORT']
+    temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'UPLOAD']
+    #temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'IMPORT']
 
     # sets the thread-id
     THREAD_ID = "MAIN"
@@ -96,8 +97,14 @@ if __name__ == '__main__':
 
     utils.output(THREAD_ID, "__main__", "__main__", "OPENPYXL - READING EXCEL FILE INTO MEMORY.", slock)
     
+    # lock the excel
+    elock.acquire()
+
     # gets all of the data from the workbook
     excel_dict = filereader.get_xl_data(arg_excel_file)
+
+    # release the lock()
+    elock.release()
 
     utils.output(THREAD_ID, "__main__", "__main__", "OPENPYXL - READING EXCEL FILE INTO MEMORY. COMPLETE.", slock)
 
@@ -112,6 +119,12 @@ if __name__ == '__main__':
     elif arg_operation.lower() == "download":
         utils.output(THREAD_ID, "__main__", "__main__", "OPERATION SET TO DOWNLOAD.")
         program_operation = PLC_OPERATION_DOWNLOAD
+    elif arg_operation.lower() == 'import':
+        utils.output(THREAD_ID, "__main__", "__main__", "OPERATION SET TO IMPORT.")
+        program_operation = PLC_OPERATION_IMPORT
+    elif arg_operation.lower() == 'export':
+        utils.output(THREAD_ID, "__main__", "__main__", "OPERATION SET TO EXPORT.")
+        program_operation = PLC_OPERATION_EXPORT
     else:
         raise Exception("Invalid Input for Operation: %s" % arg_operation)
     # end if
@@ -216,9 +229,11 @@ if __name__ == '__main__':
             time.sleep(0.5)
         # end while
     # end if
-
-    # if there was an upload - save the workbook
-    if program_operation == PLC_OPERATION_UPLOAD:
+    
+    utils.output("MAIN", "__main__", "__main__", "Completed sheet processing.")
+    
+    # if there was an upload or import - save the workbook
+    if program_operation == PLC_OPERATION_UPLOAD or program_operation == PLC_OPERATION_IMPORT:
         elock.acquire()
         utils.output("MAIN", "__main__", "__main__", "Saving workbook after upload.")
         xl = excel_interface.Interface(arg_excel_file)
