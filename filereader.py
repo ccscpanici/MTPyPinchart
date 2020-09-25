@@ -41,7 +41,7 @@ def get_sheet_data(sheet):
                 pass
             # end try
 
-            for a_range in sheet.merged_cells.ranges:
+            for a_range in sheet.merged_cells.ranges:                
                 if cell == a_range.start_cell:
                     _cell_dict['merged_cell'] = True
                     _cell_dict['row_span'] = a_range.size['rows']

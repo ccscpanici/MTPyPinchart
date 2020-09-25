@@ -1,6 +1,9 @@
 import win32com.client as win32
 import utils
+import time
+
 import pythoncom
+
 class Interface(object):
 
     def __init__(self, file_name, sheet_name=None):
@@ -16,8 +19,10 @@ class Interface(object):
         if self.app is not None:
             return self.app
         else:
+            
             # not sure if this will screw everything up
-            #pythoncom.CoInitialize()
+            pythoncom.CoInitialize()
+            
             self.app = win32.gencache.EnsureDispatch("Excel.Application")
             self.app.Visible = True
             return self.app

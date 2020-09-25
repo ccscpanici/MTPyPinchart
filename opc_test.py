@@ -1,18 +1,23 @@
 import OpenOPC
 import threading
 import time
-import pywintypes
+#import pywintypes
 
-pywintypes.datetime = pywintypes.TimeType
+#pywintypes.datetime = pywintypes.TimeType
 
 def upload_opc_data(tags, group):
 
+    print("Starting thread")
     opc = OpenOPC.client()
-    opc.connect('RSLinx OPC Server')
+    try:
+        opc.connect('RSLinx OPC Server')
 
-    data = opc.read(tags=tags)
-    print(data)
-
+        print("Getting data...")
+        data = opc.read(tags=tags)
+        print(data)
+    except Exception as ex:
+        print("ERROR: %s" % ex)
+    # end try
 # end
 
 def threads_running(thread_list):

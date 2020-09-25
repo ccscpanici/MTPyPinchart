@@ -2,11 +2,10 @@ import OpenOPC
 import serialize
 import utils
 import excel_interface
-import pywintypes
 import pc5_interface
+import time
+import random
 from main import PLC_OPERATION_DOWNLOAD, PLC_OPERATION_UPLOAD, PLC_OPERATION_EXPORT, PLC_OPERATION_IMPORT, OPC_SERVER
-
-pywintypes.datetime = pywintypes.TimeType
 
 def threads_running(thread_list):
     count = 0
@@ -20,12 +19,18 @@ def threads_running(thread_list):
 
 # # WORKER MODULE IS FOR PROCESSING A SHEETs
 # ON A SEPARATE THREAD
-def process_sheet(elock, opclock, slock, pc5lock, main_sheet_object, \
+def process_sheet(olock, elock, slock, pc5lock, main_sheet_object, \
                     sheet_name, sheet_dict, config_data, operation, \
                     thread_id, full_file_path):
-    
-    utils.output(thread_id, "worker", "process_sheet", "PROCESSING SHEET %s" % sheet_name, slock)
 
+    utils.output(thread_id, "worker", "process_sheet", "PROCESSING SHEET %s" % sheet_name, slock)
+    
+    # sleep a random time between 0 and 3 seconds.
+    # this should give the system a chance to get the proper
+    # locks in
+    _sleep_time = random.uniform(0,3)
+    time.sleep(_sleep_time)
+    
     # get the sheet serializer
     sheet_object = serialize.PLCSheetData(sheet_dict, config_data, thread_id)
 
@@ -42,6 +47,13 @@ def process_sheet(elock, opclock, slock, pc5lock, main_sheet_object, \
     running = True
 
     # loop through different chunks of data
+    # gets the number of chunks that need to be processed
+    _data_chunks = _plc_data_structure.__len__()
+    _data_chunk_index = 1
+
+    # this keeps track of how many errors there were
+    operation_errors = 0
+
     for plc_data_column in _plc_data_structure:
 
         if not running:
@@ -63,9 +75,10 @@ def process_sheet(elock, opclock, slock, pc5lock, main_sheet_object, \
 
             # waits until no other thread is using
             # the opc object.
-            opclock.acquire()
             opc = OpenOPC.client()
+            olock.acquire()
             opc.connect(OPC_SERVER)
+            olock.release()
 
             #utils.output(thread_id, "worker", "process_sheet", "CONNECTED TO OPC SERVER.", slock)
         # end if
@@ -98,20 +111,26 @@ def process_sheet(elock, opclock, slock, pc5lock, main_sheet_object, \
 
         if operation == PLC_OPERATION_DOWNLOAD:
 
-            utils.output(thread_id, "worker", "process_sheet", "%s-GETTING PLC ADDRESSES AND VALUES..." % sheet_name, slock)
+            #utils.output(thread_id, "worker", "process_sheet", "%s-GETTING PLC ADDRESSES AND VALUES..." % sheet_name, slock)
             data_tuples = sheet_object.get_address_value_list(plc_data_column['plc_data'], plc_data_column['data']['type'])
 
-            utils.output(thread_id, "worker", "process_sheet", "%s-GETTING DOWNLOADING DATA CHUNK..." % sheet_name, slock)
-
             try:
+                olock.acquire()
+                utils.output(thread_id, "worker", "process_sheet", "%s--DOWNLOADING-- DATA CHUNK.[%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
                 _return_data = opc.write(data_tuples)
+                olock.release()
+                for _address, _success in _return_data:
+                    if _success.lower() != "success":
+                        utils.output(thread_id, "worker", "process_sheet", "DOWNLOAD ERROR: %s" % _address, slock)
+                        operation_errors = operation_errors + 1
+                    # end if
+                # end for
             except Exception as ex:
                 utils.output(thread_id, "worker", "process_sheet", "UNHANDLED ERROR: %s" % ex, slock)
+                olock.release()
                 running = False
                 _return_data = None
             # end try
-
-            opclock.release()
 
             # process the return data
             # on the download - we probably don't have to, maybe print
@@ -126,23 +145,22 @@ def process_sheet(elock, opclock, slock, pc5lock, main_sheet_object, \
         elif operation == PLC_OPERATION_UPLOAD:
             
             # gets the address list for upload
-            utils.output(thread_id, "worker", "process_sheet", "%s-GETTING PLC ADDRESSES..." % sheet_name, slock)
-            addresses = sheet_object.get_address_list(plc_data_column['plc_data'])
+            #utils.output(thread_id, "worker", "process_sheet", "%s-GETTING PLC ADDRESSES..." % sheet_name, slock)
 
-            utils.output(thread_id, "worker", "process_sheet", "%s-GETTING UPLOADING DATA CHUNK..." % sheet_name, slock)
-            
+            addresses = sheet_object.get_address_list(plc_data_column['plc_data'])
             try:
-                
+                olock.acquire()
+                utils.output(thread_id, "worker", "process_sheet", "%s--UPLOADING-- DATA CHUNK.[%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
                 _return_data = opc.read(addresses)
+                olock.release()
 
             except Exception as ex:
+                olock.release()
                 _return_data = None
                 utils.output(thread_id, "worker", "process_sheet", "UNHANDLED ERROR: %s" % ex, slock)
                 running = False
             # end try
-            
-            opclock.release()
-            
+                        
             if _return_data:
                 # process the return data, if there are a bunch
                 # of errors, maybe kick it out?
@@ -152,12 +170,12 @@ def process_sheet(elock, opclock, slock, pc5lock, main_sheet_object, \
                 elock.acquire()
 
                 # create the win32com excel interface class
-                utils.output(thread_id, "worker", "process_sheet", "%s-GETTING WORKBOOK..." % sheet_name, slock)
+                #utils.output(thread_id, "worker", "process_sheet", "%s-GETTING WORKBOOK..." % sheet_name, slock)
                 _excel = excel_interface.Interface(full_file_path, sheet_name)
 
                 # hand the interface class the data that needs 
                 # to be updated
-                utils.output(thread_id, "worker", "process_sheet", "%s-UPDATING WORKSHEET WITH DATA CHUNK..." % sheet_name, slock)
+                utils.output(thread_id, "worker", "process_sheet", "%s--UPDATING WORKSHEET-- WITH DATA CHUNK.[%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
                 _excel.update_sheet(plc_data_column, config_data)
 
                 # after it is all updated, release the lock
@@ -174,12 +192,12 @@ def process_sheet(elock, opclock, slock, pc5lock, main_sheet_object, \
             elock.acquire()
 
             # create the win32com excel interface class
-            utils.output(thread_id, "worker", "process_sheet", "%s-GETTING WORKBOOK..." % sheet_name, slock)
+            #utils.output(thread_id, "worker", "process_sheet", "%s-GETTING WORKBOOK..." % sheet_name, slock)
             _excel = excel_interface.Interface(full_file_path, sheet_name)
 
             # hand the interface class the data that needs 
             # to be updated
-            utils.output(thread_id, "worker", "process_sheet", "%s-UPDATING WORKSHEET WITH DATA CHUNK..." % sheet_name, slock)
+            utils.output(thread_id, "worker", "process_sheet", "%s--UPDATING WORKSHEET-- WITH DATA CHUNK.[%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
             _excel.update_sheet(plc_data_column, config_data)
 
             # after it is all updated, release the lock
@@ -193,18 +211,24 @@ def process_sheet(elock, opclock, slock, pc5lock, main_sheet_object, \
 
             # export the operation from the sheet
             # to the PC5 file
-            pass
+            pc5.update_data_tables(plc_data_column)
 
             # release the lock
             pc5lock.release()
 
         else:
             elock.release()
-            opclock.release()
             pc5lock.release()
             elock.release()
             raise Exception("Invalid PLC Operation")
         # end if
         
+        _data_chunk_index = _data_chunk_index + 1
     # end for
+
+    # if there were errors - print this at the end so the user knows.
+    if operation_errors > 0:
+        utils.output(thread_id, "worker", "process_sheet", "%s:***IMPORTANT****OPERATION COMPLETED WITH %s ERRORS****" % (sheet_name, operation_errors), slock)
+    # end if
+
 # end if

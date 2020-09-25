@@ -172,73 +172,58 @@ class PC5_File(object):
         return new_string
     # end __update_line__()
 
-    def update_data_tables(self, plc_data_from_excel):
+    def update_data_tables(self, plc_data_column):
 
         #output(self.__class__.__name__, "update_data_tables", "Updating SLC file with values in pin chart sheet...")
         
         # this method updates the values that are in the data
         # table.
-        _data = plc_data_from_excel
 
         # copy the raw file into the output variable
         self.__output_file__ = self.__raw_file__
 
-        for _column in _data.keys():
+        for _item in plc_data_column['plc_data']:
 
-            # gets the column data 
-            _column_data = _data[_column]
+            # gets the plc address
+            _address = _item['address']
+            _new_value = _item['value']
 
-            # loops through the items in the column data
-            for _column_data_item in _column_data:
+            # if the topic is included witin the 
+            # address
+            if _address.__contains__("]"):
+                _address = _address.split("]")[1]
+            # end if
 
-                # gets the plc address
-                _address = _column_data_item['address']
-                _new_value = _column_data_item['value']
+            # get the file reference for the address
+            _reference = self.__reference_table__[_address]
 
-                if _address.__contains__("]"):
-                    _address = _address.split("]")[1]
-                # end if
+            # gets the reference line number
+            _reference_line_number = _reference['line_index']
 
-                # get the file reference for the address
-                _reference = self.__reference_table__[_address]
+            # get the reference line
+            _reference_line = self.__raw_file__[_reference_line_number]
 
-                # gets the reference line number
-                _reference_line_number = _reference['line_index']
+            # update the line with the new value
+            _updated_line = self.__update_line__(_reference_line, _address, _new_value)
 
-                # get the reference line
-                _reference_line = self.__raw_file__[_reference_line_number]
+            # replace the line with the updated one
+            self.__output_file__[_reference_line_number] = _updated_line
 
-                # update the line with the new value
-                _updated_line = self.__update_line__(_reference_line, _address, _new_value)
-
-                # replace the line with the updated one
-                self.__output_file__[_reference_line_number] = _updated_line
-
-            # end looping through column data
-        # end looping through data columns
+        # end looping through data items
         
         #output(self.__class__.__name__, "update_data_tables", "Updating SLC file with values in pin chart sheet...Complete")
     # end update_data_tables
 
     def save_file(self):
 
-        #output(self.__class__.__name__, "save_file", "Writing lines of new PC5 file located at: %s...." % self.__filename__)
-
         # writes the text file
-        try:
-            _file = open(self.__filename__, 'w')
+        _file = open(self.__filename__, 'w')
 
-            for _line in self.__output_file__:
-                _file.write(_line)
-            # end for
+        for _line in self.__output_file__:
+            _file.write(_line)
+        # end for
 
-            # close the file
-            _file.close()
-            
-            #output(self.__class__.__name__, "save_file", "Writing lines of new PC5 file located at: %s....Complete." % self.__filename__)
-            return True
-        except IOError as ex:
-            #output(self.__class__.__name__, "save_file", "IO ERROR: Permission Denied - File Locked. Export not successful. %s" % ex)
-            return False
-        # end try
+        # close the file
+        _file.close()
+    # end save_file
 # end SLC_File

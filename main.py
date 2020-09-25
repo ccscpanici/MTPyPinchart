@@ -8,6 +8,9 @@ import sys
 import utils
 import time
 import excel_interface
+import pywintypes
+
+pywintypes.datetime = pywintypes.TimeType
 
 PLC_OPERATION_DOWNLOAD = 0
 PLC_OPERATION_UPLOAD = 1
@@ -24,8 +27,9 @@ if __name__ == '__main__':
 
     # temporary user arguments
     #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
-    temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'UPLOAD']
-    #temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'IMPORT']
+    #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'UPLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
+    temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'IMPORT']
+    #temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'export']
 
     # sets the thread-id
     THREAD_ID = "MAIN"
@@ -131,25 +135,25 @@ if __name__ == '__main__':
 
     utils.output(THREAD_ID, "__main__", "__main__", "PREPPING SHEETS FOR PROCESSING.", slock)
 
+    # get the main sheet first
+    _main_sheet_data = excel_dict['Main Program']
+    utils.output(THREAD_ID, "__main__", "__main__", "MAIN PROGRAM SHEET FOUND. EXTRACTING CONFIGURATION.", slock)
+
+    # serialized the main sheet into a class
+    main_sheet = serialize.MainSheetData(_main_sheet_data, "MAIN")
+
+    # gets the configutation dictionary for the workbook. If it doesn't
+    # find the configuration, it uses default values.
+    config_data = main_sheet.get_config_data()
+
+    utils.output(THREAD_ID, "__main__", "__main__", "CONFIGURATION FOUND: %s" % config_data, slock)
+
     for sheet_name in excel_dict:
 
         # gets the sheet data
         sheet_data = excel_dict[sheet_name]
 
-        if sheet_name.lower() == 'main program':
-
-            utils.output(THREAD_ID, "__main__", "__main__", "MAIN PROGRAM SHEET FOUND. EXTRACTING CONFIGURATION.", slock)
-
-            # serialized the main sheet into a class
-            main_sheet = serialize.MainSheetData(sheet_data, "MAIN")
-
-            # gets the configutation dictionary for the workbook. If it doesn't
-            # find the configuration, it uses default values.
-            config_data = main_sheet.get_config_data()
-
-            utils.output(THREAD_ID, "__main__", "__main__", "CONFIGURATION FOUND: %s" % config_data, slock)
-
-        elif (process_all_sheets or (sheet_name.lower() in arg_sheets)) \
+        if (process_all_sheets or (sheet_name.lower() in arg_sheets)) \
             and sheet_name.lower() != "main program" and (sheet_name.lower().__contains__('plc') or \
                 sheet_name.lower().__contains__('pinchart')):
 
@@ -157,8 +161,8 @@ if __name__ == '__main__':
             # thread
             sheets_to_process.append(
                 {
+                    'olock': olock,
                     'elock': elock,
-                    'opclock': olock,
                     'slock': slock,
                     'pc5lock': pc5lock,
                     'main_sheet_object': main_sheet,
@@ -188,8 +192,8 @@ if __name__ == '__main__':
             sheet_process_data['thread_id'] = thread_id
 
             _worker_arguments = (
+                sheet_process_data['olock'],
                 sheet_process_data['elock'],
-                sheet_process_data['opclock'],
                 sheet_process_data['slock'],
                 sheet_process_data['pc5lock'],
                 sheet_process_data['main_sheet_object'],
@@ -209,8 +213,8 @@ if __name__ == '__main__':
         else:
 
             worker.process_sheet(
+                sheet_process_data['olock'],
                 sheet_process_data['elock'],
-                sheet_process_data['opclock'],
                 sheet_process_data['slock'],
                 sheet_process_data['pc5lock'],
                 sheet_process_data['main_sheet_object'],
