@@ -9,6 +9,7 @@ import utils
 import time
 import excel_interface
 import pywintypes
+import Cip
 
 pywintypes.datetime = pywintypes.TimeType
 
@@ -20,6 +21,10 @@ PLC_OPERATION_EXPORT = 3
 # USE THIS BOOL TO TURN MULTITHREADED
 # ON AND OFF
 MULTITHREAD = True
+
+# Sets the maximum number of concurrent
+# PLC connections
+CIP_CONCURRENT_CONNECTIONS = 2
 
 OPC_SERVER = 'RSLinx OPC Server'
 
@@ -41,17 +46,8 @@ if __name__ == '__main__':
     # but we'll see how much.
     slock = threading.Lock()
 
-    # setup the thread locks.
-    # excel lock
-    elock = threading.Lock()
-
-    # opc lock
-    olock = threading.Lock()
-
-    # PC5 file lock - this protects
-    # the PC5 file from getting overwritten
-    # by other threads
-    pc5lock = threading.Lock()
+    # initializes the worker keyword arguments
+    worker_kwargs = {'slock':slock}
 
     utils.output(THREAD_ID, "__main__", "__main__", "PROCESSING USER ARGUMENTS.", slock)
 
@@ -103,15 +99,9 @@ if __name__ == '__main__':
     # end if
 
     utils.output(THREAD_ID, "__main__", "__main__", "OPENPYXL - READING EXCEL FILE INTO MEMORY.", slock)
-    
-    # lock the excel
-    elock.acquire()
 
     # gets all of the data from the workbook
     excel_dict = filereader.get_xl_data(arg_excel_file)
-
-    # release the lock()
-    elock.release()
 
     utils.output(THREAD_ID, "__main__", "__main__", "OPENPYXL - READING EXCEL FILE INTO MEMORY. COMPLETE.", slock)
 
@@ -136,6 +126,9 @@ if __name__ == '__main__':
         raise Exception("Invalid Input for Operation: %s" % arg_operation)
     # end if
 
+    # adds the operation to the worker kwargs
+    worker_kwargs['operation'] = program_operation
+
     utils.output(THREAD_ID, "__main__", "__main__", "PREPPING SHEETS FOR PROCESSING.", slock)
 
     # get the main sheet first
@@ -148,8 +141,54 @@ if __name__ == '__main__':
     # gets the configutation dictionary for the workbook. If it doesn't
     # find the configuration, it uses default values.
     config_data = main_sheet.get_config_data()
-
     utils.output(THREAD_ID, "__main__", "__main__", "CONFIGURATION FOUND: %s" % config_data, slock)
+
+    if program_operation == PLC_OPERATION_DOWNLOAD or program_operation == PLC_OPERATION_UPLOAD:
+
+        ip_address = main_sheet.get_search_offset_value("IP Address", 0, 1)
+        slot_number = main_sheet.get_search_offset_value("Slot", 0, 1)
+
+        worker_kwargs['ip_address'] = ip_address
+        worker_kwargs['slot_number'] = slot_number
+
+        # instantiates a new CIP manager
+        cip_manager = Cip.ConnManager(CIP_CONCURRENT_CONNECTIONS)
+        
+        if ip_address is None or slot_number is None:
+            raise Exception("Could not locate IP address or slot number.")
+        else:
+            cip_path = "%s/%s" % (ip_address, slot_number)
+            cip_manager.wait_for_connection()
+
+            utils.output(THREAD_ID, "__main__", "__main__", "Connecting to controller @ %s" % cip_path, slock)
+            c = Cip.LogixController(ip_address, slot_number)
+
+            # we give this to the worker class, that way it
+            # will not have to do it again.
+            _tags = c.get_plc_tags()
+            _plc_info = c.plc_info
+
+            # remove the connection
+            cip_manager.remove_connection()
+        # end if
+
+        # adds the data to the worker kwargs
+        worker_kwargs['cip_manager'] = cip_manager
+        worker_kwargs['plc_tags'] = _tags
+
+    if program_operation == PLC_OPERATION_UPLOAD or program_operation == PLC_OPERATION_IMPORT:
+        elock = threading.Lock()
+        worker_kwargs['elock'] = elock
+        worker_kwargs['excel_file'] = arg_excel_file
+
+    if program_operation == PLC_OPERATION_IMPORT or program_operation == PLC_OPERATION_EXPORT:
+        pc5_lock = threading.Lock()
+        _pc5_file = main_sheet.get_pc5_file()
+
+        worker_kwargs['pc5_lock'] = pc5_lock
+        worker_kwargs['pc5_file'] = _pc5_file
+
+    # end if
 
     for sheet_name in excel_dict:
 
@@ -162,20 +201,9 @@ if __name__ == '__main__':
 
             # add the sheet name to process on a different
             # thread
-            sheets_to_process.append(
-                {
-                    'olock': olock,
-                    'elock': elock,
-                    'slock': slock,
-                    'pc5lock': pc5lock,
-                    'main_sheet_object': main_sheet,
-                    'sheet_name': sheet_name,
-                    'sheet_dict': sheet_data,
-                    'config_data': config_data,
-                    'operation': program_operation,
-                    'full_file_path': arg_excel_file
-                }
-            )
+            worker_kwargs['sheet_name'] = sheet_name
+            worker_kwargs['sheet_dict'] = sheet_data
+            sheets_to_process.append(kwargs)
         # end if
     # end for
 
@@ -192,42 +220,17 @@ if __name__ == '__main__':
 
             # increment thread id
             thread_id = thread_id + 1
+
             sheet_process_data['thread_id'] = thread_id
 
-            _worker_arguments = (
-                sheet_process_data['olock'],
-                sheet_process_data['elock'],
-                sheet_process_data['slock'],
-                sheet_process_data['pc5lock'],
-                sheet_process_data['main_sheet_object'],
-                sheet_process_data['sheet_name'],
-                sheet_process_data['sheet_dict'],
-                sheet_process_data['config_data'],
-                sheet_process_data['operation'],
-                sheet_process_data['thread_id'],
-                sheet_process_data['full_file_path']
-            )
-
             # process the sheet
-            t = threading.Thread(group=None, target=worker.process_sheet, args=_worker_arguments)
+            t = threading.Thread(group=None, target=worker.process_sheet, kwargs=sheet_process_data)
             t.start()
             sheet_threads.append(t)
 
         else:
-
-            worker.process_sheet(
-                sheet_process_data['olock'],
-                sheet_process_data['elock'],
-                sheet_process_data['slock'],
-                sheet_process_data['pc5lock'],
-                sheet_process_data['main_sheet_object'],
-                sheet_process_data['sheet_name'],
-                sheet_process_data['sheet_dict'],
-                sheet_process_data['config_data'],
-                sheet_process_data['operation'],
-                "MAIN",
-                sheet_process_data['full_file_path']
-            )
+            sheet_process_data['thread_id'] = "MAIN"
+            worker.process_sheet(**sheet_process_data)
         # end if
     # end worker
     

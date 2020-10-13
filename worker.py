@@ -6,6 +6,7 @@ import pc5_interface
 import time
 import random
 from main import PLC_OPERATION_DOWNLOAD, PLC_OPERATION_UPLOAD, PLC_OPERATION_EXPORT, PLC_OPERATION_IMPORT, OPC_SERVER
+import Cip
 
 def threads_running(thread_list):
     count = 0
@@ -19,9 +20,15 @@ def threads_running(thread_list):
 
 # # WORKER MODULE IS FOR PROCESSING A SHEETs
 # ON A SEPARATE THREAD
-def process_sheet(olock, elock, slock, pc5lock, main_sheet_object, \
-                    sheet_name, sheet_dict, config_data, operation, \
-                    thread_id, full_file_path):
+def process_sheet(**kwargs):
+
+    # working out the kwargs
+    thread_id = kwargs['thread_id']
+    sheet_name = kwargs['sheet_name']
+    sheet_dict = kwargs['sheet_dict']
+    config_data = kwargs['config_data']
+    operation = kwargs['operation']
+    slock = kwargs['slock']
 
     utils.output(thread_id, "worker", "process_sheet", "PROCESSING SHEET %s" % sheet_name, slock)
     
@@ -63,40 +70,25 @@ def process_sheet(olock, elock, slock, pc5lock, main_sheet_object, \
 
         if operation == PLC_OPERATION_UPLOAD or operation == PLC_OPERATION_DOWNLOAD:
                 
-            # OPC RELATED OPERATIONS
-            # get the topic from the main sheet
-            _topic = main_sheet_object.get_opc_topic()
-
-            # set the serializer class topic
-            sheet_object.set_opc_topic(_topic)
-
             # get the plc data for the column
             plc_data_column['plc_data'] = sheet_object.get_plc_data_for_column(plc_data_column)
-
-            # waits until no other thread is using
-            # the opc object.
-            opc = OpenOPC.client()
-            olock.acquire()
-            opc.connect(OPC_SERVER)
-            olock.release()
 
             #utils.output(thread_id, "worker", "process_sheet", "CONNECTED TO OPC SERVER.", slock)
         # end if
 
         if operation == PLC_OPERATION_IMPORT or operation == PLC_OPERATION_EXPORT:
-                
-            # PC5 FILE OPERATIONS
-            # get the PLC file
-            _pc5_file = main_sheet_object.get_pc5_file()
+            
+            pc5_file = kwargs['pc5_file']
+            pc5_lock = kwargs['pc5_lock']
 
             # lock the file
-            pc5lock.acquire()
+            pc5_lock.acquire()
 
             # read the pc5 file
-            pc5 = pc5_interface.PC5_File(_pc5_file)
+            pc5 = pc5_interface.PC5_File(pc5_file)
 
             # release the pc5 file lock
-            pc5lock.release()
+            pc5_lock.release()
 
             # get the plc data for the column. We don't need to set an opc topic
             plc_data_column['plc_data'] = sheet_object.get_plc_data_for_column(plc_data_column)
@@ -109,72 +101,71 @@ def process_sheet(olock, elock, slock, pc5lock, main_sheet_object, \
 
         # end if
 
+        if operation == PLC_OPERATION_UPLOAD or operation == PLC_OPERATION_DOWNLOAD:
+
+            cip_manager = kwargs['cip_manager']
+            plc_tags = kwargs['plc_tags']
+            ip_address = kwargs['ip_address']
+            slot_number = kwargs['slot_number']
+            controller = Cip.LogixController(ip_address, slot_number, plc_tags)
+
+        if operation == PLC_OPERATION_UPLOAD or operation == PLC_OPERATION_IMPORT:
+            elock = kwargs['elock']
+            excel_file_path = kwargs['excel_file_path']
+
         if operation == PLC_OPERATION_DOWNLOAD:
 
             #utils.output(thread_id, "worker", "process_sheet", "%s-GETTING PLC ADDRESSES AND VALUES..." % sheet_name, slock)
             data_tuples = sheet_object.get_address_value_list(plc_data_column['plc_data'], plc_data_column['data']['type'])
 
-            try:
-                olock.acquire()
-                utils.output(thread_id, "worker", "process_sheet", "%s--DOWNLOADING-- DATA CHUNK.[%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
-                _return_data = opc.write(data_tuples)
-                olock.release()
-                _index = 0
-                for _address, _success in _return_data:
-                    _value = data_tuples[_index][1]
-                    if _success.lower() != "success":
-                        utils.output(thread_id, "worker", "process_sheet", "DOWNLOAD ERROR ADDRESS: %s \t VALUE: %s" % (_address, _value), slock)
-                        operation_errors = operation_errors + 1
+            # wait for a  CIP connection from the manager, 
+            # this is a blocking call so it won't continue until
+            # it has one
+            cip_manager.wait_for_connection()
+
+            # print the downloading message
+            utils.output(thread_id, "worker", "process_sheet", "%s--DOWNLOADING-- Data Chunk [%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
+
+            # write the controller tags
+            response = controller.write_tags(data_tuples)
+
+            # remove the connection from the manager that way
+            # another thread can access it.
+            cip_manager.remove_connection()
+
+            if not all(response):
+                # there were errors during transmission
+                for i in response:
+                    if i['error']:
+                        utils.output(thread_id, "worker", "process_sheet", "Tag Error: %s, \tValue: %s" % (i['tag'], i['value']), slock)
                     # end if
-                    _index += 1
                 # end for
-            except Exception as ex:
-                utils.output(thread_id, "worker", "process_sheet", "UNHANDLED ERROR: %s" % ex, slock)
-                olock.release()
-                running = False
-                _return_data = None
-            # end try
-
-            # process the return data
-            # on the download - we probably don't have to, maybe print
-            # any errors?
-
-            if _return_data:
-                # process the data from the opc function. Maybe raise an error,
-                # if too many errors were returned?
-                pass
-            # end _return_data
+            # end if           
 
         elif operation == PLC_OPERATION_UPLOAD:
             
-            # gets the address list for upload
-            #utils.output(thread_id, "worker", "process_sheet", "%s-GETTING PLC ADDRESSES..." % sheet_name, slock)
-
+            # gets the address list
             addresses = sheet_object.get_address_list(plc_data_column['plc_data'])
-            try:
-                olock.acquire()
-                utils.output(thread_id, "worker", "process_sheet", "%s--UPLOADING-- DATA CHUNK.[%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
-                _return_data = opc.read(addresses)
-                olock.release()
+            
+            # grab a cip connection
+            cip_manager.wait_for_connection()
 
-            except Exception as ex:
-                olock.release()
-                _return_data = None
-                utils.output(thread_id, "worker", "process_sheet", "UNHANDLED ERROR: %s" % ex, slock)
-                running = False
-            # end try
+            utils.output(thread_id, "worker", "process_sheet", "%s--UPLOADING-- DATA CHUNK.[%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
+
+            # upload the data
+            response = controller.read_tags(addresses)
                         
-            if _return_data:
+            if response:
                 # process the return data, if there are a bunch
                 # of errors, maybe kick it out?
-                plc_data_column['plc_data'] = sheet_object.update_data_with_new_values(plc_data_column['data']['type'], plc_data_column['plc_data'], _return_data)
+                plc_data_column['plc_data'] = sheet_object.update_data_with_new_values(plc_data_column['data']['type'], plc_data_column['plc_data'], response)
 
                 # lock the execl
                 elock.acquire()
 
                 # create the win32com excel interface class
                 #utils.output(thread_id, "worker", "process_sheet", "%s-GETTING WORKBOOK..." % sheet_name, slock)
-                _excel = excel_interface.Interface(full_file_path, sheet_name)
+                _excel = excel_interface.Interface(excel_file_path, sheet_name)
 
                 # hand the interface class the data that needs 
                 # to be updated
@@ -196,7 +187,7 @@ def process_sheet(olock, elock, slock, pc5lock, main_sheet_object, \
 
             # create the win32com excel interface class
             #utils.output(thread_id, "worker", "process_sheet", "%s-GETTING WORKBOOK..." % sheet_name, slock)
-            _excel = excel_interface.Interface(full_file_path, sheet_name)
+            _excel = excel_interface.Interface(excel_file_path, sheet_name)
 
             # hand the interface class the data that needs 
             # to be updated
@@ -210,18 +201,18 @@ def process_sheet(olock, elock, slock, pc5lock, main_sheet_object, \
 
             # lock the pc5 file so we can write to
             # it.
-            pc5lock.acquire()
+            pc5_lock.acquire()
 
             # export the operation from the sheet
             # to the PC5 file
             pc5.update_data_tables(plc_data_column)
 
             # release the lock
-            pc5lock.release()
+            pc5_lock.release()
 
         else:
             elock.release()
-            pc5lock.release()
+            pc5_lock.release()
             elock.release()
             raise Exception("Invalid PLC Operation")
         # end if

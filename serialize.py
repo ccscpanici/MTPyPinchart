@@ -114,18 +114,7 @@ class PLCSheetData(SheetDataBase):
     def __init__(self, sheet_dict, config_data, thread_id):
         super(PLCSheetData, self).__init__(sheet_dict,thread_id)
         self.config_data = config_data
-        self.opc_topic = None
     # end __init__()
-
-    def get_opc_topic(self):
-        return self.opc_topic
-    # end get_opc_topic
-
-    def set_opc_topic(self, value):
-        if self.opc_topic != value:
-            self.opc_topic = value
-        # end if
-    # end set_opc_topid
 
     def get_plc_data_for_column(self, plc_data_column):
 
@@ -150,19 +139,11 @@ class PLCSheetData(SheetDataBase):
             _address_cell = self.get_cell_in_row(a_row, _address_column)
             _address_cell_value = self.concat_cell_values(_address_cell, _address_column_span)
 
-            _topic = self.get_opc_topic()
-            if _topic is not None:
-                _full_address = "[%s]%s" % (_topic, _address_cell_value.strip())
-            else:
-                _full_address = _address_cell_value.strip()
-            # end if
-
             _plc_data = {
-                'address':_full_address,
+                'address':_address_cell_value.strip(),
                 'value':_value_cell_value,
                 'address_cell':_address_cell,
-                'value_cell':_value_cell,
-                'full_address':_full_address
+                'value_cell':_value_cell
             }
 
             _plc_column_data.append(_plc_data)
@@ -179,8 +160,9 @@ class PLCSheetData(SheetDataBase):
         # references.
         _header_row = self.get_header_row()
         _header_row_number = _header_row[0]['row']
+        
         _data_row_start = _header_row_number + data_row_offset
-        _data_structure = self.get_plc_data_structure(_header_row)
+        _data_structure = self.get_plc_data_structure()
 
         for a_plc_range in _data_structure:
             _value_column = a_plc_range['value']['column']
@@ -197,19 +179,11 @@ class PLCSheetData(SheetDataBase):
                 _address_cell = self.get_cell_in_row(a_row, _address_column)
                 _address_cell_value = self.concat_cell_values(_address_cell, _address_column_span)
 
-                _topic = self.get_opc_topic()
-                if _topic is not None:
-                    _full_address = "[%s]%s" % (_topic, _address_cell_value.strip())
-                else:
-                    _full_address = _address_cell_value.strip()
-                # end if
-
                 _plc_data = {
-                    'address':_full_address,
+                    'address':_address_cell_value.strip(),
                     'value':_value_cell_value,
                     'address_cell':_address_cell,
-                    'value_cell':_value_cell,
-                    'full_address':_full_address
+                    'value_cell':_value_cell
                 }
                 _plc_column_data.append(_plc_data)
             # end for
@@ -354,21 +328,6 @@ class MainSheetData(SheetDataBase):
         return self.search_sheet(CONFIG_FLAG)
     # end get_config_cell
 
-    def get_opc_topic(self):
-
-        if self.opc_topic is None:
-            # gets the topic value
-            _topic = self.get_search_offset_value(OPC_TOPIC_FLAG, 0, OPC_TOPIC_OFFSET)
-
-            if _topic is not None and _topic != "":
-                self.opc_topic = _topic
-            else:
-                raise Exception("Could not locate valid OPC topic in MAIN PROGRAM sheet.")
-        # end if
-
-        return self.opc_topic
-    # end get_opc_topic
-
     def get_pc5_file(self):
         if self.slc_file is None:
             _slc_file = self.get_search_offset_value(SLC_FILE_FLAG, 0, SLC_FILE_OFFSET)
@@ -382,6 +341,14 @@ class MainSheetData(SheetDataBase):
         return self.slc_file
     # end get_slc_file
 
+    def get_ip_address(self):
+        return self.get_search_offset_value("IP Address", 0, 1)
+    # end get_ip_address
+
+    def get_slot_number(self):
+        return self.get_search_offset_value("Slot", 0, 1)
+    # end get slot address
+    
     def get_config_data(self):
         if self.config_data is None:
 

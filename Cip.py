@@ -1,5 +1,4 @@
 from pycomm3 import LogixDriver
-import CIPConnectionManager
 import threading
 
 import time
@@ -41,7 +40,7 @@ class LogixController(object):
         self.cip_path = "%s/%s" % (ip_address_string, slot_number)
         self.plc_info = None
         self.tag_structure = tag_structure
-    def get_plc_info(self):
+    def get_plc_tags(self):
         """
         This function reads the tags inside the controller
         and returns them. This only needs to be done once.
@@ -61,7 +60,7 @@ class LogixController(object):
         return self.__plc_operation__(tag_list, True)
 
     def __plc_operation__(self, tag_list, write=False):
-        _tag_structure = self.get_plc_info()
+        _tag_structure = self.get_plc_tags()
         c = LogixDriver(path=self.cip_path, init_tags=False, init_program_tags=False)
         c._tags = _tag_structure
         if write:
