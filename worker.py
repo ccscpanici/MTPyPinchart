@@ -119,11 +119,14 @@ def process_sheet(olock, elock, slock, pc5lock, main_sheet_object, \
                 utils.output(thread_id, "worker", "process_sheet", "%s--DOWNLOADING-- DATA CHUNK.[%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
                 _return_data = opc.write(data_tuples)
                 olock.release()
+                _index = 0
                 for _address, _success in _return_data:
+                    _value = data_tuples[_index][1]
                     if _success.lower() != "success":
-                        utils.output(thread_id, "worker", "process_sheet", "DOWNLOAD ERROR: %s" % _address, slock)
+                        utils.output(thread_id, "worker", "process_sheet", "DOWNLOAD ERROR ADDRESS: %s \t VALUE: %s" % (_address, _value), slock)
                         operation_errors = operation_errors + 1
                     # end if
+                    _index += 1
                 # end for
             except Exception as ex:
                 utils.output(thread_id, "worker", "process_sheet", "UNHANDLED ERROR: %s" % ex, slock)

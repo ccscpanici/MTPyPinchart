@@ -28,7 +28,7 @@ if __name__ == '__main__':
     # temporary user arguments
     #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
     #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'UPLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
-    temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'IMPORT']
+    #temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'IMPORT']
     #temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'export']
 
     # sets the thread-id
@@ -64,7 +64,10 @@ if __name__ == '__main__':
     # o - operation
     # s - sheet names - if this doesn't exist then we will assume all the sheets
     # print the arguments
-    args = getopt.getopt(temp_user_args, "f:o:s:")
+    args = getopt.getopt(sys.argv[1:], "f:o:s:")
+    for i in args:
+        utils.output(THREAD_ID, "__main__", "__main__", "User argument: %s" % i, slock)
+    # end for
 
     # loop through the arguments and set the variables
     arg_excel_file = False
@@ -117,16 +120,16 @@ if __name__ == '__main__':
     sheets_to_process = []
     
     # formulates the correct PLC OPERATION
-    if arg_operation.lower() == "upload":
+    if arg_operation.lower().strip() == "upload":
         utils.output(THREAD_ID, "__main__", "__main__", "OPERATION SET TO UPLOAD.")
         program_operation = PLC_OPERATION_UPLOAD
-    elif arg_operation.lower() == "download":
+    elif arg_operation.lower().strip() == "download":
         utils.output(THREAD_ID, "__main__", "__main__", "OPERATION SET TO DOWNLOAD.")
         program_operation = PLC_OPERATION_DOWNLOAD
-    elif arg_operation.lower() == 'import':
+    elif arg_operation.lower().strip() == 'import':
         utils.output(THREAD_ID, "__main__", "__main__", "OPERATION SET TO IMPORT.")
         program_operation = PLC_OPERATION_IMPORT
-    elif arg_operation.lower() == 'export':
+    elif arg_operation.lower().strip() == 'export':
         utils.output(THREAD_ID, "__main__", "__main__", "OPERATION SET TO EXPORT.")
         program_operation = PLC_OPERATION_EXPORT
     else:
