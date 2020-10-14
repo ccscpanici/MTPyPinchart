@@ -26,7 +26,7 @@ MULTITHREAD = False
 # PLC connections
 CIP_CONCURRENT_CONNECTIONS = 2
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 
 OPC_SERVER = 'RSLinx OPC Server'
 
@@ -34,8 +34,10 @@ if __name__ == '__main__':
 
     if DEBUG_MODE:
         # temporary user arguments
+        #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD', '-s', 'PINCHART-CIP']
         #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
-        temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD']
+        #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD']
+        temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'UPLOAD', '-s', 'PINCHART-PROC']
         #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'UPLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
         #temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'IMPORT']
         #temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'export']
@@ -66,7 +68,7 @@ if __name__ == '__main__':
     # s - sheet names - if this doesn't exist then we will assume all the sheets
     # print the arguments
     if DEBUG_MODE:
-        args = getopt.getopt(temp_user_args, "f:o:s")
+        args = getopt.getopt(temp_user_args, "f:o:s:")
     else:
         args = getopt.getopt(sys.argv[1:], "f:o:s:")
     # end if
@@ -176,8 +178,12 @@ if __name__ == '__main__':
 
             # we give this to the worker class, that way it
             # will not have to do it again.
+            ts1 = time.time()
             _tags = c.get_plc_tags()
             _plc_info = c.plc_info
+            ts2 = time.time()
+            ts_delta = ts2 - ts1
+            utils.output(THREAD_ID, "__main__", "__main__", "Took %s seconds to connect to controller and read tags." % ts_delta)
 
             # remove the connection
             cip_manager.remove_connection()
@@ -201,6 +207,7 @@ if __name__ == '__main__':
 
     # end if
 
+    sheets = []
     for sheet_name in excel_dict:
 
         # gets the sheet data
@@ -214,7 +221,9 @@ if __name__ == '__main__':
             # thread
             worker_kwargs['sheet_name'] = sheet_name
             worker_kwargs['sheet_dict'] = sheet_data
-            sheets_to_process.append(worker_kwargs)
+
+            # save a buffer
+            sheets_to_process.append(worker_kwargs.copy())
         # end if
     # end for
 

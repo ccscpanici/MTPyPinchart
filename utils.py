@@ -9,6 +9,28 @@ def dec2bin(decimal_number):
     return res
 # end dec2bin
 
+def get_tag_structure(a_tag_string):
+     # first this is to get rid of all of the brackets []
+    while a_tag_string.find("[") >= 0:
+        _open = a_tag_string.find("[")
+        _closed = a_tag_string.find("]")
+        a_tag_string = a_tag_string[:_open] + a_tag_string[_closed + 1:]
+    # end while
+    return a_tag_string.split('.')
+# end get_tag_structure
+
+def find(a_dictionary, a_key):
+    if a_key in a_dictionary: return a_dictionary[a_key]
+    for k, v in a_dictionary.items():
+        if isinstance(v,dict):
+            item = find(v, a_key)
+            if item is not None:
+                return item
+            # end if
+        # end if
+    # end for
+# end find
+
 def binstring_to_list(a_bin_string):
 
     int_list = []

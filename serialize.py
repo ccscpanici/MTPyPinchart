@@ -302,12 +302,12 @@ class PLCSheetData(SheetDataBase):
 
     def update_data_with_new_values(self, data_type, plc_data, new_values_from_opc):
         _data_index = 0
-        for address, value, quality, timestamp in new_values_from_opc:
+        for new_plc_tag in new_values_from_opc:
 
             _plc_data_item = plc_data[_data_index]
-            _value = utils.data_converter(_plc_data_item['value'], data_type)
+            _value = utils.data_converter(new_plc_tag.value, data_type)
 
-            if _plc_data_item['address'] == address:
+            if _plc_data_item['address'] == new_plc_tag.tag:
                 plc_data[_data_index]['value'] = _value
             else:
                 raise Exception("Data out of sync.")

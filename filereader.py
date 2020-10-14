@@ -4,8 +4,6 @@ import time
 import os
 import shutil
 
-test_file = os.getcwd() +  "\\Klondike Feta BF Pin Chart_StarTurn610.xlsm"
-
 def get_sheet_data(sheet):
     rows = []
     row_index = 1

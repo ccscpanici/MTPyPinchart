@@ -97,14 +97,14 @@ def process_sheet(**kwargs):
         if operation == PLC_OPERATION_UPLOAD or operation == PLC_OPERATION_DOWNLOAD:
 
             cip_manager = kwargs['cip_manager']
-            plc_tags = kwargs['plc_tags']
             ip_address = kwargs['ip_address']
             slot_number = kwargs['slot_number']
+            plc_tags = kwargs['plc_tags']
             controller = Cip.LogixController(ip_address, slot_number, plc_tags)
 
         if operation == PLC_OPERATION_UPLOAD or operation == PLC_OPERATION_IMPORT:
             elock = kwargs['elock']
-            excel_file_path = kwargs['excel_file_path']
+            excel_file_path = kwargs['excel_file']
 
         if operation == PLC_OPERATION_DOWNLOAD:
 
@@ -118,6 +118,17 @@ def process_sheet(**kwargs):
 
             # print the downloading message
             utils.output(thread_id, "worker", "process_sheet", "%s--DOWNLOADING-- Data Chunk [%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
+
+            # data type check. Get the first item in the array and make
+            # sure the datatype matches. If it doesn't than error on the
+            # data chunck and don't download it because there will
+            # be an exception.
+            
+            # gets the base tag of the whole tag string ie: RO_Data[0].Min[6] returns RO_Data
+            tag_structure = utils.get_tag_structure(data_tuples[0][0])
+
+            # searches the tag structure for the child node
+            #utils.find()
 
             # write the controller tags
             response = controller.write_tags(data_tuples)
@@ -147,6 +158,9 @@ def process_sheet(**kwargs):
 
             # upload the data
             response = controller.read_tags(addresses)
+
+            # remember to remove the CIP connection
+            cip_manager.remove_connection()
                         
             if response:
                 # process the return data, if there are a bunch
