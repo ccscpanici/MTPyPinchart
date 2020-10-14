@@ -1,4 +1,3 @@
-import OpenOPC
 import serialize
 import utils
 import excel_interface
@@ -31,12 +30,6 @@ def process_sheet(**kwargs):
     slock = kwargs['slock']
 
     utils.output(thread_id, "worker", "process_sheet", "PROCESSING SHEET %s" % sheet_name, slock)
-    
-    # sleep a random time between 0 and 3 seconds.
-    # this should give the system a chance to get the proper
-    # locks in
-    _sleep_time = random.uniform(0,3)
-    time.sleep(_sleep_time)
     
     # get the sheet serializer
     sheet_object = serialize.PLCSheetData(sheet_dict, config_data, thread_id)

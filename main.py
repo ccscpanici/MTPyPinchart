@@ -20,21 +20,26 @@ PLC_OPERATION_EXPORT = 3
 
 # USE THIS BOOL TO TURN MULTITHREADED
 # ON AND OFF
-MULTITHREAD = True
+MULTITHREAD = False
 
 # Sets the maximum number of concurrent
 # PLC connections
 CIP_CONCURRENT_CONNECTIONS = 2
 
+DEBUG_MODE = True
+
 OPC_SERVER = 'RSLinx OPC Server'
 
 if __name__ == '__main__':
 
-    # temporary user arguments
-    #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
-    #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'UPLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
-    #temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'IMPORT']
-    #temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'export']
+    if DEBUG_MODE:
+        # temporary user arguments
+        #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
+        temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD']
+        #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'UPLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
+        #temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'IMPORT']
+        #temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'export']
+    # end if
 
     # sets the thread-id
     THREAD_ID = "MAIN"
@@ -60,7 +65,12 @@ if __name__ == '__main__':
     # o - operation
     # s - sheet names - if this doesn't exist then we will assume all the sheets
     # print the arguments
-    args = getopt.getopt(sys.argv[1:], "f:o:s:")
+    if DEBUG_MODE:
+        args = getopt.getopt(temp_user_args, "f:o:s")
+    else:
+        args = getopt.getopt(sys.argv[1:], "f:o:s:")
+    # end if
+
     for i in args:
         utils.output(THREAD_ID, "__main__", "__main__", "User argument: %s" % i, slock)
     # end for
@@ -141,6 +151,7 @@ if __name__ == '__main__':
     # gets the configutation dictionary for the workbook. If it doesn't
     # find the configuration, it uses default values.
     config_data = main_sheet.get_config_data()
+    worker_kwargs['config_data'] = config_data
     utils.output(THREAD_ID, "__main__", "__main__", "CONFIGURATION FOUND: %s" % config_data, slock)
 
     if program_operation == PLC_OPERATION_DOWNLOAD or program_operation == PLC_OPERATION_UPLOAD:
@@ -203,7 +214,7 @@ if __name__ == '__main__':
             # thread
             worker_kwargs['sheet_name'] = sheet_name
             worker_kwargs['sheet_dict'] = sheet_data
-            sheets_to_process.append(kwargs)
+            sheets_to_process.append(worker_kwargs)
         # end if
     # end for
 
