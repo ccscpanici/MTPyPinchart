@@ -1,6 +1,5 @@
 import serialize
 import utils
-import excel_interface
 import pc5_interface
 import time
 import random
@@ -148,6 +147,8 @@ def process_sheet(**kwargs):
 
         elif operation == PLC_OPERATION_UPLOAD:
             
+            import excel_interface
+
             # gets the address list
             addresses = sheet_object.get_address_list(plc_data_column['plc_data'])
             

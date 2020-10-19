@@ -7,11 +7,12 @@ import getopt
 import sys
 import utils
 import time
-import excel_interface
-import pywintypes
 import Cip
 
-pywintypes.datetime = pywintypes.TimeType
+if sys.platform == "win32":
+    import pywintypes
+    pywintypes.datetime = pywintypes.TimeType
+# end if
 
 PLC_OPERATION_DOWNLOAD = 0
 PLC_OPERATION_UPLOAD = 1
@@ -20,7 +21,7 @@ PLC_OPERATION_EXPORT = 3
 
 # USE THIS BOOL TO TURN MULTITHREADED
 # ON AND OFF
-MULTITHREAD = False
+MULTITHREAD = True
 
 # Sets the maximum number of concurrent
 # PLC connections
@@ -70,7 +71,7 @@ if __name__ == '__main__':
     if DEBUG_MODE:
         args = getopt.getopt(temp_user_args, "f:o:s:")
     else:
-        args = getopt.getopt(sys.argv[1:], "f:o:s:")
+        args = getopt.getopt(sys.argv[1:], "hf:o:s:")
     # end if
 
     for i in args:
@@ -83,17 +84,27 @@ if __name__ == '__main__':
     arg_sheets = False
     process_all_sheets = False
     for switch, value in args[0]:
-        if switch == '-f':
+        if switch in ['-f', '--file']:
             arg_excel_file = value
-        elif switch == '-o':
+        elif switch in ['-o', '--operation']:
             arg_operation = value
-        elif switch == '-s':
+        elif switch in ['-s', '--sheet']:
 
             # gets the user called sheets to process
             arg_sheets = value.replace(" ", "").strip().split(",")
 
             # lower case the sheet
             arg_sheets = [i.lower() for i in arg_sheets]
+        elif switch in ['-h', '--help']:
+            print("--------------------------------------------------------------------------------")
+            print("Usage: python main.py -f <excel file path>, -o <operation string>, (optional) -s <sheet list comma separated string>")
+            print("--------------------------------------------------------------------------------")
+            print("\tswitch\t\t\t\tdescription")
+            print("\t-h\t--help\t\t\tOutput help for usage.")
+            print("\t-f\t--file\t\t\tInput file for processing operations.")
+            print("\t-o\t--operation\t\tOperation on file (UPLOAD, DOWNLOAD, IMPORT, or EXPORT")
+            print("\t-s\t--sheet\t\t\tOPTIONAL: Sheet string to process (default all sheets). Comma separated.")
+            sys.exit(1)
         else:
             raise Exception("Invalid switch %s" % switch)
             sys.exit(1)
@@ -264,6 +275,8 @@ if __name__ == '__main__':
     
     # if there was an upload or import - save the workbook
     if program_operation == PLC_OPERATION_UPLOAD or program_operation == PLC_OPERATION_IMPORT:
+        import excel_interface
+        
         elock.acquire()
         utils.output("MAIN", "__main__", "__main__", "Saving workbook after upload.")
         xl = excel_interface.Interface(arg_excel_file)

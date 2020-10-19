@@ -1,8 +1,13 @@
-import win32com.client as win32
 import utils
 import time
+import sys
 
-import pythoncom
+if sys.platform == "win32":
+    import win32com.client as win32
+    import pythoncom
+else:
+    raise Exception("Excel interface only works on windows systems.")
+# end if
 
 class Interface(object):
 
