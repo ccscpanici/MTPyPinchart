@@ -10,8 +10,9 @@ import time
 import Cip
 
 if sys.platform == "win32":
-    import pywintypes
-    pywintypes.datetime = pywintypes.TimeType
+    #import pywintypes
+    #pywintypes.datetime = pywintypes.TimeType
+    pass
 # end if
 
 PLC_OPERATION_DOWNLOAD = 0
