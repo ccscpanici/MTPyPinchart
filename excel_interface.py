@@ -26,7 +26,7 @@ class Interface(object):
         else:
             
             # not sure if this will screw everything up
-            pythoncom.CoInitialize()
+            #pythoncom.CoInitialize()
             
             self.app = win32.gencache.EnsureDispatch("Excel.Application")
             self.app.Visible = True
@@ -72,9 +72,10 @@ class Interface(object):
 
     def update_range(self, sheet_name, range_dict):
     
+        # gets the different attributes for the excel range,
+        # we need the two cells and the data matrix
         _cell1_row = range_dict['cell1']['row']
         _cell1_col = range_dict['cell1']['column']
-
         _cell2_row = range_dict['cell2']['row']
         _cell2_col = range_dict['cell2']['column']
 
