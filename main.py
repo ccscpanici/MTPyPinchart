@@ -261,10 +261,9 @@ if __name__ == '__main__':
         import excel_interface
         
         elock.acquire()
-        utils.output("MAIN", "__main__", "__main__", "Saving workbook after upload.")
 
+        utils.output("MAIN", "__main__", "__main__", "Saving workbook after upload.")
         xl = excel_interface.Interface(arg_excel_file)
-        
         xl.save_workbook()
         elock.release()
     # end if

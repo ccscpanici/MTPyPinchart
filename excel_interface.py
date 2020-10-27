@@ -7,7 +7,7 @@ if sys.platform == "win32":
     import pythoncom
     
     # not sure if this will screw everything up
-    pythoncom.CoInitialize()
+    #pythoncom.CoInitialize()
 else:
     raise Exception("Excel interface only works on windows systems.")
 # end if
@@ -26,7 +26,7 @@ class Interface(object):
             return self.app
         else:
             # not sure if this will screw everything up
-            pythoncom.CoInitialize()
+            #pythoncom.CoInitialize()
 
             self.app = win32.gencache.EnsureDispatch("Excel.Application")
             self.app.Visible = True
@@ -43,12 +43,6 @@ class Interface(object):
     
     def enable_calculation(self):
         self.app.Calculation = -4105
-
-    def disable_screenupdate(self):
-        self.app.ScreenUpdating = False
-
-    def enable_screenupdate(self):
-        self.app.ScreenUpdating = True
 
     def get_workbook(self):
 
@@ -100,7 +94,6 @@ class Interface(object):
         # turn all of the shit off
         self.disable_alerts()
         self.disable_calculation()
-        self.disable_screenupdate()
         
         # gets the worksheet
         _worksheet = _workbook.Worksheets(sheet_name)
@@ -118,7 +111,6 @@ class Interface(object):
         # turn the shit back on
         self.enable_alerts()
         self.enable_calculation()
-        self.enable_screenupdate()
 
         _workbook.Save()
     # end save_workbook
