@@ -5,6 +5,7 @@ import time
 import random
 from main import PLC_OPERATION_DOWNLOAD, PLC_OPERATION_UPLOAD, PLC_OPERATION_EXPORT, PLC_OPERATION_IMPORT
 import Cip
+import settings
 
 def threads_running(thread_list):
     count = 0
@@ -53,6 +54,25 @@ def process_sheet(**kwargs):
     # this keeps track of how many errors there were
     operation_errors = 0
 
+    if operation == PLC_OPERATION_UPLOAD or operation == PLC_OPERATION_IMPORT:
+        import excel_interface
+
+        elock = kwargs['elock']
+        excel_file_path = kwargs['excel_file']
+
+        # create the win32com excel interface class
+        #utils.output(thread_id, "worker", "process_sheet", "%s-GETTING WORKBOOK..." % sheet_name, slock)
+        _excel = excel_interface.Interface(excel_file_path, sheet_name, settings.MULTITHREAD)
+    
+    if operation == PLC_OPERATION_UPLOAD or operation == PLC_OPERATION_DOWNLOAD:
+
+        cip_manager = kwargs['cip_manager']
+        ip_address = kwargs['ip_address']
+        slot_number = kwargs['slot_number']
+        plc_tags = kwargs['plc_tags']
+        controller = Cip.LogixController(ip_address, slot_number, plc_tags)
+
+    # LOOPING THROUGH THE DATA SET(S)
     for plc_data_column in _plc_data_structure:
 
         if not running:
@@ -92,18 +112,6 @@ def process_sheet(**kwargs):
             # end if
 
         # end if
-
-        if operation == PLC_OPERATION_UPLOAD or operation == PLC_OPERATION_DOWNLOAD:
-
-            cip_manager = kwargs['cip_manager']
-            ip_address = kwargs['ip_address']
-            slot_number = kwargs['slot_number']
-            plc_tags = kwargs['plc_tags']
-            controller = Cip.LogixController(ip_address, slot_number, plc_tags)
-
-        if operation == PLC_OPERATION_UPLOAD or operation == PLC_OPERATION_IMPORT:
-            elock = kwargs['elock']
-            excel_file_path = kwargs['excel_file']
 
         if operation == PLC_OPERATION_DOWNLOAD:
 
@@ -147,8 +155,6 @@ def process_sheet(**kwargs):
 
         elif operation == PLC_OPERATION_UPLOAD:
             
-            import excel_interface
-
             # gets the address list
             addresses = sheet_object.get_address_list(plc_data_column['plc_data'])
             
@@ -174,9 +180,7 @@ def process_sheet(**kwargs):
                 # lock the execl
                 elock.acquire()
 
-                # create the win32com excel interface class
-                #utils.output(thread_id, "worker", "process_sheet", "%s-GETTING WORKBOOK..." % sheet_name, slock)
-                _excel = excel_interface.Interface(excel_file_path, sheet_name)
+                #utils.output(thread_id, "worker", "process_sheet", "AQUIRED EXCEL LOCK.", slock)
 
                 # hand the interface class the data that needs 
                 # to be updated
@@ -187,6 +191,7 @@ def process_sheet(**kwargs):
 
                 # after it is all updated, release the lock
                 elock.release()
+                #utils.output(thread_id, "worker", "process_sheet", "RELEASED EXCEL LOCK.", slock)
             # end if
 
         elif operation == PLC_OPERATION_IMPORT:
@@ -200,10 +205,6 @@ def process_sheet(**kwargs):
 
             # lock the execl
             elock.acquire()
-
-            # create the win32com excel interface class
-            #utils.output(thread_id, "worker", "process_sheet", "%s-GETTING WORKBOOK..." % sheet_name, slock)
-            _excel = excel_interface.Interface(excel_file_path, sheet_name)
 
             # hand the interface class the data that needs 
             # to be updated

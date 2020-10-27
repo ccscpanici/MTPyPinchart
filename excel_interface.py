@@ -14,23 +14,29 @@ else:
 
 class Interface(object):
 
-    def __init__(self, file_name, sheet_name=None):
+    def __init__(self, file_name, sheet_name=None, CoInitialize=False):
 
         self.filename = file_name
         self.sheet_name = sheet_name
         self.workbook = None
         self.app = None
 
+        if CoInitialize:
+            pythoncom.CoInitialize()
+
     def get_app(self):
         if self.app is not None:
             return self.app
         else:
-            # not sure if this will screw everything up
-            #pythoncom.CoInitialize()
-
-            self.app = win32.gencache.EnsureDispatch("Excel.Application")
+            self.app = win32.Dispatch("Excel.Application")
             self.app.Visible = True
             return self.app
+
+    def disable_screenupdates(self):
+        self.app.ScreenUpdating = False
+
+    def enable_screenupdates(self):
+        self.app.ScreenUpdating = True
 
     def disable_alerts(self):
         self.app.DisplayAlerts = False
@@ -47,6 +53,7 @@ class Interface(object):
     def get_workbook(self):
 
         if self.workbook is None:
+
             # gets the application instance
             _app_instance = self.get_app()
 
@@ -92,6 +99,7 @@ class Interface(object):
         _workbook = self.get_workbook()
 
         # turn all of the shit off
+        #self.disable_screenupdates()
         self.disable_alerts()
         self.disable_calculation()
         
@@ -109,6 +117,7 @@ class Interface(object):
         _workbook = self.get_workbook()
 
         # turn the shit back on
+        #self.enable_screenupdates()
         self.enable_alerts()
         self.enable_calculation()
 

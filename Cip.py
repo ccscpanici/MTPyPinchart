@@ -67,6 +67,10 @@ class LogixController(object):
             results = c.write(*tag_list)
         else:
             results = c.read(*tag_list)
-        
+
+        # close the connection after the
+        # operation.
+        c.close()
+
         return results
         
