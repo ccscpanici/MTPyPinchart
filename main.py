@@ -8,6 +8,13 @@ import sys
 import utils
 import time
 import Cip
+import settings
+
+# PLC Operation 
+PLC_OPERATION_DOWNLOAD = 0
+PLC_OPERATION_UPLOAD = 1
+PLC_OPERATION_IMPORT = 2
+PLC_OPERATION_EXPORT = 3
 
 if sys.platform == "win32":
     #import pywintypes
@@ -15,36 +22,7 @@ if sys.platform == "win32":
     pass
 # end if
 
-PLC_OPERATION_DOWNLOAD = 0
-PLC_OPERATION_UPLOAD = 1
-PLC_OPERATION_IMPORT = 2
-PLC_OPERATION_EXPORT = 3
-
-# USE THIS BOOL TO TURN MULTITHREADED
-# ON AND OFF
-MULTITHREAD = True
-DEBUG_MODE = False
-
-# Sets the maximum number of concurrent
-# PLC connections
-CIP_CONCURRENT_CONNECTIONS = 2
-
-OPC_SERVER = 'RSLinx OPC Server'
-
 if __name__ == '__main__':
-
-    if DEBUG_MODE:
-        # temporary user arguments
-        _file = "Z:\\data\\Documents\\_Active Jobs\\CFR\\C 20034 Saputo Almena\\03_Documents\\03.1_PinCharts\\03.1.1_PinCharts\\_20034 Tags and Setpoints-rev2.3.xlsm"
-        #temp_user_args = ['-f', _file, '-o', 'UPLOAD', '-s', 'PLC DATA-Valve Config']
-        #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD', '-s', 'PINCHART-CIP']
-        #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
-        #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD']
-        temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'UPLOAD']
-        #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'UPLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
-        #temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'IMPORT']
-        #temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'export']
-    # end if
 
     # sets the thread-id
     THREAD_ID = "MAIN"
@@ -70,8 +48,8 @@ if __name__ == '__main__':
     # o - operation
     # s - sheet names - if this doesn't exist then we will assume all the sheets
     # print the arguments
-    if DEBUG_MODE:
-        args = getopt.getopt(temp_user_args, "f:o:s:")
+    if settings.DEBUG_MODE:
+        args = getopt.getopt(settings.DEBUG_USER_ARGS, "f:o:s:")
     else:
         args = getopt.getopt(sys.argv[1:], "hf:o:s:")
     # end if
@@ -181,7 +159,7 @@ if __name__ == '__main__':
         worker_kwargs['slot_number'] = slot_number
 
         # instantiates a new CIP manager
-        cip_manager = Cip.ConnManager(CIP_CONCURRENT_CONNECTIONS)
+        cip_manager = Cip.ConnManager(settings.CIP_CONCURRENT_CONNECTIONS)
         
         if ip_address is None or slot_number is None:
             raise Exception("Could not locate IP address or slot number.")
@@ -252,7 +230,7 @@ if __name__ == '__main__':
     for sheet_process_data in sheets_to_process:
 
         #elock, opclock, sheet_name, sheet_dict, config_data, operation
-        if MULTITHREAD:
+        if settings.MULTITHREAD:
 
             # increment thread id
             thread_id = thread_id + 1
@@ -270,7 +248,7 @@ if __name__ == '__main__':
         # end if
     # end worker
     
-    if MULTITHREAD:
+    if settings.MULTITHREAD:
         while worker.threads_running(sheet_threads) > 0:
             time.sleep(0.5)
         # end while
