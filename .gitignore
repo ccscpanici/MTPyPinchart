@@ -1,4 +1,7 @@
-*venv/
-*.vscode/
-*__pychache__/
+venv/
+venv/*
+.vscode/
+.vscode/*
+__pychache__/
+__pychache__/*
 *.pyc
