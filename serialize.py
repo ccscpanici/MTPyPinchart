@@ -316,6 +316,100 @@ class PLCSheetData(SheetDataBase):
         # end for
         return plc_data
     # end update_data_with_new_values
+
+    def get_update_ranges(self, plc_data_column, config_data):
+
+        # gets the value ranges
+        _data_type = plc_data_column['data']['type']
+        _standard = ['STRING DATA', 'FLOAT DATA', 'DINT DATA', 'INT DATA']
+
+        # get the plc data list
+        _data = plc_data_column['plc_data']
+        
+        # get the first value address
+        _first_cell = _data[0]['value_cell']['cell']
+
+        # get the last cell coordinates
+        _last_cell = _data[_data.__len__() - 1]['value_cell']['cell']
+
+        # get the column data. maybe I can do this in a lambda
+        value_data = []
+
+        if _data_type in _standard:
+
+            # check that they both start with the same column
+            if _first_cell.column_letter != _first_cell.column_letter:
+                raise Exception("Invalid: Columns need to be the same within the data chuncks")
+
+            for i in _data:
+                value_data.append([i['value']])
+
+            return {
+                    'cell1' : { 'row':_first_cell.row, 'column':_first_cell.column }, 
+                    'cell2' : { 'row':_last_cell.row, 'column':_last_cell.column},
+                    'data' : value_data
+                    }
+        else:
+            if _data_type == "DINT-32 DATA":
+
+                # gets the offset from the configuration data
+                _bit_column_offset = config_data['DINT-32 BITS OFFSET']
+
+                # need to find the first bit (32)
+                _first_row = _first_cell.row
+                _first_column = _first_cell.column + _bit_column_offset
+
+                # gets the last cell coordinates
+                _last_row = _last_cell.row
+                _last_column = _first_column + 31
+
+                for i in _data:
+
+                    # convert the value to an array
+                    _bin_list = utils.get_32bit_bin(i['value'])
+                    # this line replaces the zeros with empty strings
+                    _bin_value_list = [x if x==1 else '' for x in _bin_list]
+                    
+                    value_data.append(_bin_value_list)
+
+                    return_dict = {
+                        'cell1' : {'row' : _first_row, 'column' : _first_column},
+                        'cell2' : {'row' : _last_row, 'column' : _last_column},
+                        'data' : value_data
+                    }
+                    
+                return return_dict
+
+            elif _data_type == "INT-16 DATA":
+                
+                # gets the offset from the configuration data
+                _bit_column_offset = config_data['INT-16 BITS OFFSET']
+
+                # need to find the first bit (32)
+                _first_row = _first_cell.row
+                _first_column = _first_cell.column + _bit_column_offset
+
+                # gets the last cell coordinates
+                _last_row = _last_cell.row
+                _last_column = _first_column + 15
+
+                for i in _data:
+
+                    # convert the value to an array
+                    _bin_list = utils.get_16bit_bin(i['value'])
+                    # this line replaces the zeros with empty strings
+                    _bin_value_list = [x if x==1 else '' for x in _bin_list]
+                    
+                    value_data.append(_bin_value_list)
+
+                    return_dict = {
+                        'cell1' : {'row' : _first_row, 'column' : _first_column},
+                        'cell2' : {'row' : _last_row, 'column' : _last_column},
+                        'data' : value_data
+                    }
+        # end if
+    # end get_update_ranges
+
 # end PLCSheetData
 
 class MainSheetData(SheetDataBase):

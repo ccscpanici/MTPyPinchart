@@ -168,6 +168,9 @@ def process_sheet(**kwargs):
                 # of errors, maybe kick it out?
                 plc_data_column['plc_data'] = sheet_object.update_data_with_new_values(plc_data_column['data']['type'], plc_data_column['plc_data'], response)
 
+                # gets the value ranges from the serializer
+                value_range = sheet_object.get_update_ranges(plc_data_column, config_data)
+
                 # lock the execl
                 elock.acquire()
 
@@ -178,7 +181,9 @@ def process_sheet(**kwargs):
                 # hand the interface class the data that needs 
                 # to be updated
                 utils.output(thread_id, "worker", "process_sheet", "%s--UPDATING WORKSHEET-- WITH DATA CHUNK.[%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
-                _excel.update_sheet(plc_data_column, config_data)
+                
+                # updates the physical sheet
+                _excel.update_range(sheet_name, value_range)
 
                 # after it is all updated, release the lock
                 elock.release()
@@ -190,6 +195,9 @@ def process_sheet(**kwargs):
             # updates the dictionary
             plc_data_column['plc_data'] = pc5.get_plc_values(plc_data_column)
 
+            # gets the value ranges from the serializer
+            value_range = sheet_object.get_update_ranges(plc_data_column, config_data)
+
             # lock the execl
             elock.acquire()
 
@@ -200,7 +208,9 @@ def process_sheet(**kwargs):
             # hand the interface class the data that needs 
             # to be updated
             utils.output(thread_id, "worker", "process_sheet", "%s--UPDATING WORKSHEET-- WITH DATA CHUNK.[%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
-            _excel.update_sheet(plc_data_column, config_data)
+            
+            # updates the excel ranges that need updating
+            _excel.update_range(sheet_name, value_range)
 
             # after it is all updated, release the lock
             elock.release()

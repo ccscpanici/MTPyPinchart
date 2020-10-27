@@ -68,78 +68,28 @@ class Interface(object):
 
         return self.workbook
         
-    # end load_workbook
+    # end load_workbook()
 
-    def update_sheet(self, plc_data_column, config_data):
+    def update_range(self, sheet_name, range_dict):
+    
+        _cell1_row = range_dict['cell1']['row']
+        _cell1_col = range_dict['cell1']['column']
+
+        _cell2_row = range_dict['cell2']['row']
+        _cell2_col = range_dict['cell2']['column']
 
         # gets the workbook
         _workbook = self.get_workbook()
-
-        if self.sheet_name is None:
-            raise Exception("No sheet name specified")
-        # end if
-
-        # gets the worksheet
-        _worksheet = _workbook.Worksheets(self.sheet_name)
-
-        # start updating the worksheet
-        _data_type = plc_data_column['data']['type']
         
-        # loop through the PLC data
-        _plc_data = plc_data_column['plc_data']
+        # gets the worksheet
+        _worksheet = _workbook.Worksheets(sheet_name)
 
-        for i in _plc_data:
+        # gets the worksheet cells
+        _cell1 = _worksheet.Cells(_cell1_row, _cell1_col)
+        _cell2 = _worksheet.Cells(_cell2_row, _cell2_col)
 
-            _row = i['value_cell']['row']
-            _column = i['value_cell']['column']
-            _value = i['value']
-
-            if _data_type == "FLOAT DATA" or _data_type == "STRING DATA" or _data_type == "DINT DATA" or \
-                _data_type == "INT DATA":
-                # updates the value
-                _worksheet.Cells(_row, _column).Value = _value
-                
-            elif _data_type == "DINT-32 DATA":
-
-                _start_column = _column + config_data['DINT-32 BITS OFFSET']
-                _end_column = _start_column + 32
-
-                # get the binary representation in a list
-                _bin = utils.get_32bit_bin(_value)
-
-                for i in range(0, 32):
-                    _bit_column = _start_column + i
-                    _bit_value = _bin[i]
-                    if _bit_value == 0:                    
-                        # update the bit
-                        _worksheet.Cells(_row, _bit_column).Value = ""
-                    else:
-                        _worksheet.Cells(_row, _bit_column).Value = _bit_value
-                    # end if
-                # end for
-
-            elif _data_type == "INT-16 DATA":
-
-                _start_column = _column + config_data['INT-16 BITS OFFSET']
-                _end_column = _start_column + 16
-
-                # get the binary representation in a list
-                _bin = utils.get_16bit_bin(_value)
-
-                for i in range(0, 16):
-                    _bit_column = _start_column + i
-                    _bit_value = _bin[i]
-                    if _bit_value == 0:
-                        # update the bit
-                        _worksheet.Cells(_row, _bit_column).Value = ""
-                    else:
-                        _worksheet.Cells(_row, _bit_column).Value = _bit_value
-                    # end if
-                pass
-            # end if
-        # end for
-
-    # end update_sheet
+        # writes the range
+        _worksheet.Range(_cell1, _cell2).Value = range_dict['data']
 
     def save_workbook(self):
         _workbook = self.get_workbook()

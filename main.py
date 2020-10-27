@@ -23,12 +23,11 @@ PLC_OPERATION_EXPORT = 3
 # USE THIS BOOL TO TURN MULTITHREADED
 # ON AND OFF
 MULTITHREAD = True
+DEBUG_MODE = True
 
 # Sets the maximum number of concurrent
 # PLC connections
 CIP_CONCURRENT_CONNECTIONS = 2
-
-DEBUG_MODE = False
 
 OPC_SERVER = 'RSLinx OPC Server'
 
@@ -36,10 +35,12 @@ if __name__ == '__main__':
 
     if DEBUG_MODE:
         # temporary user arguments
+        _file = "Z:\\data\\Documents\\_Active Jobs\\CFR\\C 20034 Saputo Almena\\03_Documents\\03.1_PinCharts\\03.1.1_PinCharts\\_20034 Tags and Setpoints-rev2.3.xlsm"
+        #temp_user_args = ['-f', _file, '-o', 'UPLOAD', '-s', 'PLC DATA-Valve Config']
         #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD', '-s', 'PINCHART-CIP']
         #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
         #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'DOWNLOAD']
-        temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'UPLOAD', '-s', 'PINCHART-PROC']
+        temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'UPLOAD']
         #temp_user_args = ['-f', os.getcwd() + "/" + "RO Pinchart.xlsm", '-o', 'UPLOAD', '-s', 'PINCHART-PROC, PINCHART-CIP']
         #temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'IMPORT']
         #temp_user_args = ['-f', os.getcwd() + "/" + "SLC Pinchart.xlsm", '-o', 'export']
@@ -92,7 +93,10 @@ if __name__ == '__main__':
         elif switch in ['-s', '--sheet']:
 
             # gets the user called sheets to process
-            arg_sheets = value.replace(" ", "").strip().split(",")
+            arg_sheets = []
+            for i in value.strip().split(","):
+                arg_sheets.append(i.strip())
+            # end for
 
             # lower case the sheet
             arg_sheets = [i.lower() for i in arg_sheets]
