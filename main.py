@@ -23,7 +23,7 @@ PLC_OPERATION_EXPORT = 3
 # USE THIS BOOL TO TURN MULTITHREADED
 # ON AND OFF
 MULTITHREAD = True
-DEBUG_MODE = True
+DEBUG_MODE = False
 
 # Sets the maximum number of concurrent
 # PLC connections
