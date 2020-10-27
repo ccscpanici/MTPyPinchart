@@ -5,6 +5,9 @@ import sys
 if sys.platform == "win32":
     import win32com.client as win32
     import pythoncom
+    
+    # not sure if this will screw everything up
+    pythoncom.CoInitialize()
 else:
     raise Exception("Excel interface only works on windows systems.")
 # end if
@@ -18,21 +21,34 @@ class Interface(object):
         self.workbook = None
         self.app = None
 
-    # end __init__()
-
     def get_app(self):
         if self.app is not None:
             return self.app
         else:
-            
             # not sure if this will screw everything up
-            #pythoncom.CoInitialize()
-            
+            pythoncom.CoInitialize()
+
             self.app = win32.gencache.EnsureDispatch("Excel.Application")
             self.app.Visible = True
             return self.app
-        # end if
-    # end get_app()
+
+    def disable_alerts(self):
+        self.app.DisplayAlerts = False
+
+    def enable_alerts(self):
+        self.app.DisplayAlerts = True
+
+    def disable_calculation(self):
+        self.app.Calculation = -4135
+    
+    def enable_calculation(self):
+        self.app.Calculation = -4105
+
+    def disable_screenupdate(self):
+        self.app.ScreenUpdating = False
+
+    def enable_screenupdate(self):
+        self.app.ScreenUpdating = True
 
     def get_workbook(self):
 
@@ -68,7 +84,6 @@ class Interface(object):
 
         return self.workbook
         
-    # end load_workbook()
 
     def update_range(self, sheet_name, range_dict):
     
@@ -81,6 +96,11 @@ class Interface(object):
 
         # gets the workbook
         _workbook = self.get_workbook()
+
+        # turn all of the shit off
+        self.disable_alerts()
+        self.disable_calculation()
+        self.disable_screenupdate()
         
         # gets the worksheet
         _worksheet = _workbook.Worksheets(sheet_name)
@@ -94,6 +114,12 @@ class Interface(object):
 
     def save_workbook(self):
         _workbook = self.get_workbook()
+
+        # turn the shit back on
+        self.enable_alerts()
+        self.enable_calculation()
+        self.enable_screenupdate()
+
         _workbook.Save()
     # end save_workbook
     

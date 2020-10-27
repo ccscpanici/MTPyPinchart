@@ -11,7 +11,7 @@ MULTITHREAD = True
 # DEBUG MODE - TURNING THIS ON GIVES THE USER THE ABILITY TO
 # USE THE DEBUG FILE VARIABLE AND THE DEBUG_USER_ARGS VARIABLE
 # TO RUN THE SYSTEM.
-DEBUG_MODE = False
+DEBUG_MODE = True
 # Normal / static file
 # DEBUG_FILE = C:\\Users\\CCS\\Documents\\Pinchart.xlsm
 # process the pinchart in the directory.
