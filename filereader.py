@@ -69,7 +69,8 @@ def get_xl_data(a_file):
     _temp_file = _dest_dir + "\\tmp_file." + _extension 
     
     # copy the file to a temporary location
-    shutil.copy(a_file, _temp_file)
+    #shutil.copy(a_file, _temp_file)
+    shutil.copyfile(a_file, _temp_file)
 
     # open up the temporary file
     wb = openpyxl.load_workbook(_temp_file, read_only=False, data_only=True, keep_links=False)
