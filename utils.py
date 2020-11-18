@@ -2,6 +2,29 @@ from datetime import datetime
 import utils
 import numpy
 
+def get_tag_indexing_string(a_tag):
+    # this line splits the tag up using the dot
+    # as the delimeter
+    a_tag_array = a_tag.split('.')
+
+    # this chunck of code gets rid of any tag
+    # indexing.
+    buffer = []
+    for i in a_tag_array:
+        if i.__contains__("[") and i.__contains__("]"):
+            buffer.append(i[0:i.find("[")])
+        else:
+            buffer.append(i)
+
+    # this forms the indexing string
+    s = "" 
+    for i in range(0, len(buffer)):
+        if i < len(buffer) - 1:
+            s = s + "['" + buffer[i] + "']['data_type']['internal_tags']"
+        else:
+            s = s + "['" + buffer[i] + "']['data_type']"
+    return s
+
 # this function takes in a DINT and outputs a list
 # of the binary data.
 def dec2bin(decimal_number):

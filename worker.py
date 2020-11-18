@@ -113,11 +113,11 @@ def process_sheet(**kwargs):
 
         # end if
 
-        if operation == PLC_OPERATION_DOWNLOAD:
+        if operation == PLC_OPERATION_DOWNLOAD:        
 
             #utils.output(thread_id, "worker", "process_sheet", "%s-GETTING PLC ADDRESSES AND VALUES..." % sheet_name, slock)
             data_tuples = sheet_object.get_address_value_list(plc_data_column['plc_data'], plc_data_column['data']['type'])
-
+            
             # wait for a  CIP connection from the manager, 
             # this is a blocking call so it won't continue until
             # it has one
@@ -132,13 +132,22 @@ def process_sheet(**kwargs):
             # be an exception.
             
             # gets the base tag of the whole tag string ie: RO_Data[0].Min[6] returns RO_Data
-            tag_structure = utils.get_tag_structure(data_tuples[0][0])
+            #tag_structure = utils.get_tag_structure(data_tuples[0][0])
 
-            # searches the tag structure for the child node
-            #utils.find()
+            # before we write the tags we need to validate the tag list
+            validated = controller.validate_data_types(data_tuples, plc_data_column['data']['type'])
 
-            # write the controller tags
-            response = controller.write_tags(data_tuples)
+            if validated:
+
+                # if there are data validation warnings, print them out
+                if len(controller.tag_validation_warnings) > 0:
+                    utils.output(thread_id, "worker", "process_sheet", "DATA VALIDATION WARNINGS: %s" % controller.tag_validation_warnings, slock) 
+
+                # write the controller tags
+                response = controller.write_tags(data_tuples)
+
+            else:
+                utils.output(thread_id, "worker", "process_sheet", "DATA VALIDATIONS ERROR: %s" % controller.tag_validation_error, slock)
 
             # remove the connection from the manager that way
             # another thread can access it.
@@ -151,7 +160,7 @@ def process_sheet(**kwargs):
                         utils.output(thread_id, "worker", "process_sheet", "Tag Error: %s, \tValue: %s" % (i['tag'], i['value']), slock)
                     # end if
                 # end for
-            # end if           
+            # end if
 
         elif operation == PLC_OPERATION_UPLOAD:
             
@@ -160,7 +169,7 @@ def process_sheet(**kwargs):
             
             # grab a cip connection
             cip_manager.wait_for_connection()
-
+            
             utils.output(thread_id, "worker", "process_sheet", "%s--UPLOADING-- DATA CHUNK.[%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
 
             # upload the data
