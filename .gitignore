@@ -4,5 +4,5 @@ venv/*
 .vscode/*
 __pychache__/
 __pychache__/*
-settings.py
+./settings.py
 *.pyc
