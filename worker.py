@@ -118,11 +118,6 @@ def process_sheet(**kwargs):
             #utils.output(thread_id, "worker", "process_sheet", "%s-GETTING PLC ADDRESSES AND VALUES..." % sheet_name, slock)
             data_tuples = sheet_object.get_address_value_list(plc_data_column['plc_data'], plc_data_column['data']['type'])
             
-            # wait for a  CIP connection from the manager, 
-            # this is a blocking call so it won't continue until
-            # it has one
-            cip_manager.wait_for_connection()
-
             # print the downloading message
             utils.output(thread_id, "worker", "process_sheet", "%s--DOWNLOADING-- Data Chunk [%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
 
@@ -135,15 +130,20 @@ def process_sheet(**kwargs):
                 if len(controller.tag_validation_warnings) > 0:
                     utils.output(thread_id, "worker", "process_sheet", "DATA VALIDATION WARNINGS: %s" % controller.tag_validation_warnings, slock) 
 
+                # wait for a  CIP connection from the manager, 
+                # this is a blocking call so it won't continue until
+                # it has one
+                cip_manager.wait_for_connection()
+
                 # write the controller tags
                 response = controller.write_tags(data_tuples)
 
+                # remove the connection from the manager that way
+                # another thread can access it.
+                cip_manager.remove_connection()
+
             else:
                 utils.output(thread_id, "worker", "process_sheet", "DATA VALIDATIONS ERROR: %s" % controller.tag_validation_error, slock)
-
-            # remove the connection from the manager that way
-            # another thread can access it.
-            cip_manager.remove_connection()
 
             if not all(response):
                 # there were errors during transmission
