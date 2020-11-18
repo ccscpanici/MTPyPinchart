@@ -2,6 +2,15 @@ from datetime import datetime
 import utils
 import numpy
 
+def strip_array(tag: str) -> str:
+    """
+    Strip off the array portion of the tag
+    'tag[100]' -> 'tag'
+    """
+    if '[' in tag:
+        return tag[:tag.find('[')]
+    return tag
+
 def get_tag_indexing_string(a_tag):
     # this line splits the tag up using the dot
     # as the delimeter

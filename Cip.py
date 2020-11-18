@@ -1,7 +1,10 @@
-from pycomm3 import LogixDriver
+from pycomm3 import LogixDriver, RequestError
 import threading
 import utils
 import time
+import utils
+from typing import List, Tuple, Optional, Union
+
 
 class ConnManager(object):
     """ 
@@ -56,11 +59,40 @@ class LogixController(object):
         else:
             return self.tag_structure
 
+    def get_logix_driver(self):
+        c = LogixDriver(self.cip_path)
+
+
     def read_tags(self, tag_list):
         return self.__plc_operation__(tag_list, False)
 
     def write_tags(self, tag_list):
         return self.__plc_operation__(tag_list, True)
+
+    def _get_tag_info(self, base, attrs) -> Optional[dict]:
+
+        def _recurse_attrs(attrs, data):
+            cur, *remain = attrs
+            curr_tag = utils.strip_array(cur)
+            if not len(remain):
+                return data[curr_tag]
+            else:
+                if curr_tag in data:
+                    return _recurse_attrs(remain, data[curr_tag]['data_type']['internal_tags'])
+                else:
+                    return None
+        try:
+            data = self.get_plc_tags()[utils.strip_array(base)]
+            if not len(attrs):
+                return data
+            else:
+                return _recurse_attrs(attrs, data['data_type']['internal_tags'])
+        except KeyError as err:
+            raise RequestError(f"Tag doesn't exist - {err.args[0]}")
+        except Exception as err:
+            _msg = f"failed to get tag data for: {base}, {attrs}"
+            raise RequestError(_msg) from err
+
 
     def validate_data_types(self, tags_list, data_type_string):
 
@@ -81,10 +113,17 @@ class LogixController(object):
         # and are compatible with the main sheet data type
         for i in tags_list:
 
+            # splits the tuple into different variables.
+            _tag_string, _tag_value = i
+
             # get the data type from the controller tag list
-            _path_string = utils.get_tag_indexing_string(i)
-            _controller_data_type = eval("self.get_plc_tags()" + _path_string)
-            
+            base, *attrs = _tag_string.split('.')
+            definition = self._get_tag_info(base, attrs)
+            if definition['tag_type'] == 'struct':
+                _controller_data_type = definition['data_type']['name']
+            else:
+                _controller_data_type = definition['data_type']
+
             # append the controller data type to the list if
             # it is not already in there.
             if _controller_data_type not in _data_types: 
@@ -108,7 +147,7 @@ class LogixController(object):
                 self.tag_validation_error = {
                     "message":"unsupported data type",
                     "data type": data_type_string,
-                    "tag": i
+                    "tag": _tag_string
                 }
                 return False
             
@@ -124,33 +163,33 @@ class LogixController(object):
                 _sheet_type != "STRING" and _controller_data_type == "STRING":
                 self.tag_validation_error = {
                     "message":"sheet is a string type and controller type is not",
-                    "tag":i
+                    "tag":_tag_string
                 }
                 return False
             elif _sheet_type == "DINT" and _controller_data_type == "INT":
                 self.tag_validation_error = {
                     "message":"sheet is a dint and controller data type is an INT",
-                    "tag":i
+                    "tag":_tag_string
                 }
                 return False
             elif _sheet_type == "REAL" and _controller_data_type == "DINT":
                 self.tag_validation_error = {
                     "message":"sheet is a FLOAT and the controller type is a DINT",
-                    "tag": i
+                    "tag": _tag_string
                 }
                 return False
             elif _sheet_type == "DINT" and _controller_data_type == "REAL":
                 self.tag_validation_warnings.append(
                     {
                         "message":"Data mismatch warning. Sheet data is DINT and controller type is REAL",
-                        "tag":i
+                        "tag":_tag_string
                     }
                 )
             elif _sheet_type == "INT" and _controller_data_type == "DINT":
                 self.tag_validation_warnings.append(
                     {
                         "message":"Data mismatch warning. Sheet data is INT and controller type is DINT",
-                        "tag":i
+                        "tag":_tag_string
                     }
                 )
 
