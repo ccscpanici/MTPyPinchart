@@ -126,14 +126,6 @@ def process_sheet(**kwargs):
             # print the downloading message
             utils.output(thread_id, "worker", "process_sheet", "%s--DOWNLOADING-- Data Chunk [%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
 
-            # data type check. Get the first item in the array and make
-            # sure the datatype matches. If it doesn't than error on the
-            # data chunck and don't download it because there will
-            # be an exception.
-            
-            # gets the base tag of the whole tag string ie: RO_Data[0].Min[6] returns RO_Data
-            #tag_structure = utils.get_tag_structure(data_tuples[0][0])
-
             # before we write the tags we need to validate the tag list
             validated = controller.validate_data_types(data_tuples, plc_data_column['data']['type'])
 
