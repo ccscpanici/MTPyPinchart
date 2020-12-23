@@ -124,6 +124,13 @@ class LogixController(object):
             else:
                 _controller_data_type = definition['data_type']
 
+            # covers string data type of format STRING_<char_length>
+            # where char_length is the length of the string allowed
+            if len(_controller_data_type) >= 6:
+                if _controller_data_type[0:6] == "STRING":
+                    _controller_data_type = "STRING"
+            
+
             # append the controller data type to the list if
             # it is not already in there.
             if _controller_data_type not in _data_types: 
@@ -162,7 +169,7 @@ class LogixController(object):
             if _sheet_type == "STRING" and _controller_data_type != "STRING" or \
                 _sheet_type != "STRING" and _controller_data_type == "STRING":
                 self.tag_validation_error = {
-                    "message":"sheet is a string type and controller type is not",
+                    "message":"sheet is a string type and controller type is a %s" % _controller_data_type,
                     "tag":_tag_string
                 }
                 return False
