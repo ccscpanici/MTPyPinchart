@@ -152,8 +152,8 @@ def process_sheet(**kwargs):
             if not all(response):
                 # there were errors during transmission
                 for i in response:
-                    if i['error']:
-                        utils.output(thread_id, "worker", "process_sheet", "Tag Error: %s, \tValue: %s" % (i['tag'], i['value']), slock)
+                    if i.error:
+                        utils.output(thread_id, "worker", "process_sheet", "Tag Error: %s, \tValue: %s, \tERROR: %s" % (i.tag, i.value, i.error), slock)
                     # end if
                 # end for
             # end if

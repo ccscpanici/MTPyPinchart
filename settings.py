@@ -16,6 +16,7 @@ DEBUG_MODE = False
 # DEBUG_FILE = C:\\Users\\CCS\\Documents\\Pinchart.xlsm
 # process the pinchart in the directory.
 DEBUG_FILE = os.getcwd() + "\\" + "Pinchart.xlsm"
+#DEBUG_FILE = "Z:\\data\Documents\\_Active Jobs\\CFR\\C 20082 Saputo Las Cruces Brine UF\\03_Documents\\03.1_PinCharts\\03.1.1_PinCharts\\20082 Pinchart.xlsm"
 
 # DEBUG USER ARGUMENTS - WHEN IN DEBUG MODE, THE SYSTEM WILL USE THESE.
 # THE USER CAN MODIFY WHAT THEY NEED TO DO.
