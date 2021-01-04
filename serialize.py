@@ -138,15 +138,19 @@ class PLCSheetData(SheetDataBase):
 
             _address_cell = self.get_cell_in_row(a_row, _address_column)
             _address_cell_value = self.concat_cell_values(_address_cell, _address_column_span)
+            
+            if _address_cell_value is not None:
+                _plc_data = {
+                    'address':_address_cell_value.strip(),
+                    'value':_value_cell_value,
+                    'address_cell':_address_cell,
+                    'value_cell':_value_cell
+                }
 
-            _plc_data = {
-                'address':_address_cell_value.strip(),
-                'value':_value_cell_value,
-                'address_cell':_address_cell,
-                'value_cell':_value_cell
-            }
-
-            _plc_column_data.append(_plc_data)
+                _plc_column_data.append(_plc_data)
+            else:
+                raise Exception("Found blank address. If data columns are unequal split into different sheets. Cell Row: %s Cell Column: %s" % 
+                                (_address_cell['row'], _address_cell['column']))
         # end for
         
         return _plc_column_data
@@ -253,6 +257,10 @@ class PLCSheetData(SheetDataBase):
         for a_cell in _header_row:
             _cell_value = a_cell['value']
             if _cell_value is not None:
+
+                # makes sure the cell value is a string
+                _cell_value = str(_cell_value)
+                
                 if _cell_value.lower() in _valid_types:
                     # save the column
 
