@@ -136,7 +136,11 @@ def process_sheet(**kwargs):
                 cip_manager.wait_for_connection()
 
                 # write the controller tags
-                response = controller.write_tags(data_tuples)
+                try:
+                    response = controller.write_tags(data_tuples)
+                except Exception as ex:
+                    response = None
+                    raise Exception("WRITE ERROR: %s. If datatype is a string check that there are not any special characters in the string." % ex)
 
                 # remove the connection from the manager that way
                 # another thread can access it.
