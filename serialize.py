@@ -254,8 +254,11 @@ class PLCSheetData(SheetDataBase):
         # get the header row
         _header_row = self.get_header_row()
         
+        # loop through the header row cells
         for a_cell in _header_row:
+
             _cell_value = a_cell['value']
+            
             if _cell_value is not None:
 
                 # makes sure the cell value is a string
