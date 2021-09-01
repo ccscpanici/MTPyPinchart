@@ -51,7 +51,7 @@ class LogixController(object):
         This function reads the tags inside the controller
         and returns them. This only needs to be done once.
         """
-        if self.tag_structure is None:
+        if self.tag_structure is None or len(self.tag_structure) == 0:
             c = LogixDriver(self.cip_path)
             self.plc_info = c.info
             self.tag_structure = c._tags
@@ -61,7 +61,6 @@ class LogixController(object):
 
     def get_logix_driver(self):
         c = LogixDriver(self.cip_path)
-
 
     def read_tags(self, tag_list):
         return self.__plc_operation__(tag_list, False)
@@ -82,7 +81,8 @@ class LogixController(object):
                 else:
                     return None
         try:
-            data = self.get_plc_tags()[utils.strip_array(base)]
+            _base_tag = utils.strip_array(base)
+            data = self.get_plc_tags()[_base_tag]
             if not len(attrs):
                 return data
             else:
