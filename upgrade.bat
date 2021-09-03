@@ -12,4 +12,5 @@ echo "re-running dependency installation"
 
 echo "new pinchart script installation completed"
 
+PAUSE
 echo on
