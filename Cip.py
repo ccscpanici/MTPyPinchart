@@ -52,9 +52,11 @@ class LogixController(object):
         and returns them. This only needs to be done once.
         """
         if self.tag_structure is None or len(self.tag_structure) == 0:
-            c = LogixDriver(self.cip_path)
+            c = LogixDriver(self.cip_path, init_tags=True)
+            c.open()
             self.plc_info = c.info
             self.tag_structure = c._tags
+            c.close()
             return self.tag_structure
         else:
             return self.tag_structure
@@ -68,7 +70,7 @@ class LogixController(object):
     def write_tags(self, tag_list):
         return self.__plc_operation__(tag_list, True)
 
-    def _get_tag_info(self, base, attrs) -> Optional[dict]:
+    def _get_tag_info(self, base, attrs):
 
         def _recurse_attrs(attrs, data):
             cur, *remain = attrs
@@ -213,7 +215,12 @@ class LogixController(object):
     def __plc_operation__(self, tag_list, write=False):
         _tag_structure = self.get_plc_tags()
         c = LogixDriver(path=self.cip_path, init_tags=False, init_program_tags=False)
+        
+        # not sure why I would be doing that.
         c._tags = _tag_structure
+
+        # open the plc connection
+        c.open()
 
         if write:
             results = c.write(*tag_list)

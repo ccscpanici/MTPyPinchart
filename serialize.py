@@ -149,8 +149,9 @@ class PLCSheetData(SheetDataBase):
 
                 _plc_column_data.append(_plc_data)
             else:
-                raise Exception("Found blank address. If data columns are unequal split into different sheets. Cell Row: %s Cell Column: %s" % 
-                                (_address_cell['row'], _address_cell['column']))
+                #raise Exception("Found blank address. If data columns are unequal split into different sheets. Cell Row: %s Cell Column: %s" % 
+                #                (_address_cell['row'], _address_cell['column']))
+                pass
         # end for
         
         return _plc_column_data
@@ -329,6 +330,10 @@ class PLCSheetData(SheetDataBase):
     # end update_data_with_new_values
 
     def get_update_ranges(self, plc_data_column, config_data):
+        
+        # this method needs to get updated to allow for spaces.
+        # basically, if there is a jump in rows, it needs to insert
+        # a blank string in the value_data list
 
         # gets the value ranges
         _data_type = plc_data_column['data']['type']
@@ -352,8 +357,27 @@ class PLCSheetData(SheetDataBase):
             if _first_cell.column_letter != _first_cell.column_letter:
                 raise Exception("Invalid: Columns need to be the same within the data chuncks")
 
-            for i in _data:
-                value_data.append([i['value']])
+            for i in range(0, len(_data)):
+                
+                # gets the data item
+                item = _data[i]
+                
+                # appends the data item
+                value_data.append([item['value']])
+                
+                # figures out if blank rows need to be added
+                # based on a blank address in the address column
+                if i > 0 and i + 1 < len(_data):
+                    
+                    # gets the next data item
+                    next_item = _data[i+1]
+
+                    # calculates the blank rows needed by getting the difference in rows.
+                    blank_rows = next_item['address_cell']['row'] - item['address_cell']['row'] - 1
+
+                    # append the blank rows
+                    for j in range(0, blank_rows):
+                        value_data.append([''])
 
             return {
                     'cell1' : { 'row':_first_cell.row, 'column':_first_cell.column }, 
@@ -374,20 +398,60 @@ class PLCSheetData(SheetDataBase):
                 _last_row = _last_cell.row
                 _last_column = _first_column + 31
 
-                for i in _data:
+                # ------------------------old code---------------------------
+                # for i in _data:
 
-                    # convert the value to an array
-                    _bin_list = utils.get_32bit_bin(i['value'])
-                    # this line replaces the zeros with empty strings
-                    _bin_value_list = [x if x==1 else '' for x in _bin_list]
+                #     # convert the value to an array
+                #     _bin_list = utils.get_32bit_bin(i['value'])
+
+                #     # this line replaces the zeros with empty strings
+                #     _bin_value_list = [x if x==1 else '' for x in _bin_list]
                     
-                    value_data.append(_bin_value_list)
+                #     value_data.append(_bin_value_list)
+
+                #     return_dict = {
+                #         'cell1' : {'row' : _first_row, 'column' : _first_column},
+                #         'cell2' : {'row' : _last_row, 'column' : _last_column},
+                #         'data' : value_data
+                #     }
+
+                for i in range(0, len(_data)):
+                    
+                    # gets the data item using the index
+                    item = _data[i]
+                    
+                    # converts the value to an array
+                    _bin_list = utils.get_32bit_bin(item['value'])
+
+                    # this line replaces the zeros in the array with empty strings
+                    _bin_value_list = [x if x == 1 else '' for x in _bin_list]
+
+
+                    value_data.append(empty_row)
+                    
+                    # these lines figure out if blank rows need to be added due to a 
+                    # blank in the address column
+                    if i > 0 and i + 1 < len(_data):
+                        
+                        # empty row object to fill in blank lines if there are any
+                        empty_row = ['','','','','','','','','','','','','','','','',
+                                     '','','','','','','','','','','','','','','','']
+
+                        # gets the next item
+                        next_item = _data[i+1]
+
+                        # calculates the number of blank rows needed
+                        blank_rows = next_item['address_cell']['row'] - item['address_cell']['row'] - 1
+
+                        # add the additional blank rows
+                        for j in range(0, blank_rows):
+                            value_data.append(empty_row)
 
                     return_dict = {
-                        'cell1' : {'row' : _first_row, 'column' : _first_column},
-                        'cell2' : {'row' : _last_row, 'column' : _last_column},
-                        'data' : value_data
-                    }
+                         'cell1' : {'row' : _first_row, 'column' : _first_column},
+                         'cell2' : {'row' : _last_row, 'column' : _last_column},
+                         'data' : value_data
+                     }
                     
                 return return_dict
 
@@ -404,20 +468,60 @@ class PLCSheetData(SheetDataBase):
                 _last_row = _last_cell.row
                 _last_column = _first_column + 15
 
-                for i in _data:
+                # ---------------------old code----------------------------------------
+                # for i in _data:
 
-                    # convert the value to an array
-                    _bin_list = utils.get_16bit_bin(i['value'])
-                    # this line replaces the zeros with empty strings
-                    _bin_value_list = [x if x==1 else '' for x in _bin_list]
+                #     # convert the value to an array
+                #     _bin_list = utils.get_16bit_bin(i['value'])
+                #     # this line replaces the zeros with empty strings
+                #     _bin_value_list = [x if x==1 else '' for x in _bin_list]
                     
+                #     value_data.append(_bin_value_list)
+
+                #     return_dict = {
+                #         'cell1' : {'row' : _first_row, 'column' : _first_column},
+                #         'cell2' : {'row' : _last_row, 'column' : _last_column},
+                #         'data' : value_data
+                #     }
+
+                for i in range(0, len(_data)):
+
+                    # gets the data item from the array
+                    item = _data[i]
+
+                    # converts the value into an array of 1 and 0
+                    _bin_list = utils.get_16bit_bin(item['value'])
+
+                    # this line replaces the zeros with empty strings
+                    _bin_value_list = [x if x == 1 else '' for x in _bin_list]
+
+                    # appends the item to the value_data
                     value_data.append(_bin_value_list)
+                    
+                    # figures out if blank rows need to be added to the
+                    # data based on a blank row in the address column
+                    if i > 0 and i + 1 < len(_data):
+                        
+                        # empty row object to fill in blank lines if there are any
+                        empty_row = ['','','','','','','','','','','','','','','','']
+
+                        # gets the next data item
+                        next_item = _data[i+1]
+
+                        # calculates the number of blank rows needed
+                        blank_rows = next_item['address_cell']['row'] - item['address_cell']['row'] - 1
+
+                        # add the additional blank rows
+                        for j in range(0, blank_rows):
+                            value_data.append(empty_row)
 
                     return_dict = {
-                        'cell1' : {'row' : _first_row, 'column' : _first_column},
-                        'cell2' : {'row' : _last_row, 'column' : _last_column},
-                        'data' : value_data
-                    }
+                         'cell1' : {'row' : _first_row, 'column' : _first_column},
+                         'cell2' : {'row' : _last_row, 'column' : _last_column},
+                         'data' : value_data
+                     }
+
+                return return_dict
         # end if
     # end get_update_ranges
 
