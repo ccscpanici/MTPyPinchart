@@ -398,23 +398,6 @@ class PLCSheetData(SheetDataBase):
                 _last_row = _last_cell.row
                 _last_column = _first_column + 31
 
-                # ------------------------old code---------------------------
-                # for i in _data:
-
-                #     # convert the value to an array
-                #     _bin_list = utils.get_32bit_bin(i['value'])
-
-                #     # this line replaces the zeros with empty strings
-                #     _bin_value_list = [x if x==1 else '' for x in _bin_list]
-                    
-                #     value_data.append(_bin_value_list)
-
-                #     return_dict = {
-                #         'cell1' : {'row' : _first_row, 'column' : _first_column},
-                #         'cell2' : {'row' : _last_row, 'column' : _last_column},
-                #         'data' : value_data
-                #     }
-
                 for i in range(0, len(_data)):
                     
                     # gets the data item using the index
@@ -426,8 +409,8 @@ class PLCSheetData(SheetDataBase):
                     # this line replaces the zeros in the array with empty strings
                     _bin_value_list = [x if x == 1 else '' for x in _bin_list]
 
-
-                    value_data.append(empty_row)
+                    # append the value list to the value data
+                    value_data.append(_bin_value_list)
                     
                     # these lines figure out if blank rows need to be added due to a 
                     # blank in the address column
@@ -467,22 +450,6 @@ class PLCSheetData(SheetDataBase):
                 # gets the last cell coordinates
                 _last_row = _last_cell.row
                 _last_column = _first_column + 15
-
-                # ---------------------old code----------------------------------------
-                # for i in _data:
-
-                #     # convert the value to an array
-                #     _bin_list = utils.get_16bit_bin(i['value'])
-                #     # this line replaces the zeros with empty strings
-                #     _bin_value_list = [x if x==1 else '' for x in _bin_list]
-                    
-                #     value_data.append(_bin_value_list)
-
-                #     return_dict = {
-                #         'cell1' : {'row' : _first_row, 'column' : _first_column},
-                #         'cell2' : {'row' : _last_row, 'column' : _last_column},
-                #         'data' : value_data
-                #     }
 
                 for i in range(0, len(_data)):
 
