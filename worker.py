@@ -124,8 +124,6 @@ def process_sheet(**kwargs):
             #utils.output(thread_id, "worker", "process_sheet", "%s-GETTING PLC ADDRESSES AND VALUES..." % sheet_name, slock)
             data_tuples = sheet_object.get_address_value_list(plc_data_column['plc_data'], plc_data_column['data']['type'])
             
-            #print(data_tuples)
-
             # print the downloading message
             utils.output(thread_id, "worker", "process_sheet", "%s--DOWNLOADING-- Data Chunk [%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
 
@@ -146,21 +144,15 @@ def process_sheet(**kwargs):
                         # end if
                     # end for
                 # end if
+            
             except Exception as ex:
                 utils.output(thread_id, "worker", "process_sheet", "Block Write Failed, Attempting individual write(s) - exception %s" % ex, slock)
                 for aTag, aValue in data_tuples:
                     response = controller.write_tag(aTag, aValue, plc_tag_database)
                     utils.output(thread_id, "wroker", "process_sheet", "Tag: %s, Value: %s, Error: %s" % (aTag, aValue, response.error), slock)
 
-            # write the controller tags
-            #try:
-            #    response = controller.write_tags(data_tuples)
-            #except Exception as ex:
-            #    response = None
-            #    raise Exception("WRITE ERROR: %s. If datatype is a string check that there are not any special characters in the string." % ex)
-
-            # remove the connection from the manager that way
-            # another thread can access it.
+            # remove the cip connection from the manager, releasing it
+            # for a different thread
             cip_manager.remove_connection()
 
         elif operation == PLC_OPERATION_UPLOAD:
@@ -174,7 +166,7 @@ def process_sheet(**kwargs):
             utils.output(thread_id, "worker", "process_sheet", "%s--UPLOADING-- DATA CHUNK.[%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
 
             # upload the data
-            response = controller.read_tags(addresses)
+            response = controller.read_tags(addresses, plc_tag_database)
 
             # remember to remove the CIP connection
             cip_manager.remove_connection()
