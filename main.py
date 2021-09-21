@@ -170,13 +170,18 @@ if __name__ == '__main__':
             utils.output(THREAD_ID, "__main__", "__main__", "Connecting to controller @ %s" % cip_path, slock)
             c = Cip.LogixController(ip_address, slot_number)
 
+
             # we give this to the worker class, that way it
             # will not have to do it again.
             ts1 = time.time()
-            _tags = c.get_plc_tags()
-            _plc_info = c.plc_info
+
+            # gets the plc tags inside of the controller
+            plc_tag_database = c.get_tag_database()
+            
+            # calculates time taken to connect to controller
             ts2 = time.time()
             ts_delta = ts2 - ts1
+
             utils.output(THREAD_ID, "__main__", "__main__", "Took %s seconds to connect to controller and read tags." % ts_delta)
 
             # remove the connection
@@ -185,7 +190,7 @@ if __name__ == '__main__':
 
         # adds the data to the worker kwargs
         worker_kwargs['cip_manager'] = cip_manager
-        worker_kwargs['plc_tags'] = _tags
+        worker_kwargs['plc_tag_database'] = plc_tag_database
 
     if program_operation == PLC_OPERATION_UPLOAD or program_operation == PLC_OPERATION_IMPORT:
         elock = threading.Lock()

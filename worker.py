@@ -69,8 +69,14 @@ def process_sheet(**kwargs):
         cip_manager = kwargs['cip_manager']
         ip_address = kwargs['ip_address']
         slot_number = kwargs['slot_number']
-        plc_tags = kwargs['plc_tags']
-        controller = Cip.LogixController(ip_address, slot_number, plc_tags)
+        plc_tag_database = kwargs['plc_tag_database']
+
+        # initiates the CIP controller object
+        controller = Cip.LogixController(ip_address, slot_number)
+
+        # sets the controller tag database to the one that is currently
+        # in memory
+        controller.set_tag_database(plc_tag_database)
 
     # LOOPING THROUGH THE DATA SET(S)
     for plc_data_column in _plc_data_structure:
@@ -117,50 +123,45 @@ def process_sheet(**kwargs):
 
             #utils.output(thread_id, "worker", "process_sheet", "%s-GETTING PLC ADDRESSES AND VALUES..." % sheet_name, slock)
             data_tuples = sheet_object.get_address_value_list(plc_data_column['plc_data'], plc_data_column['data']['type'])
+            
+            #print(data_tuples)
 
-            # before we write the tags we need to validate the tag list
-            validated = controller.validate_data_types(data_tuples, plc_data_column['data']['type'])
+            # print the downloading message
+            utils.output(thread_id, "worker", "process_sheet", "%s--DOWNLOADING-- Data Chunk [%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
 
-            if validated:
+            # wait for a  CIP connection from the manager, 
+            # this is a blocking call so it won't continue until
+            # it has one
+            cip_manager.wait_for_connection()
+            
+            try:
+                # attempts to write the controller tags down
+                response = controller.write_tags(data_tuples, plc_tag_database)
+            
+                if not all(response):
+                    # there were errors during transmission
+                    for i in response:
+                        if i.error:
+                            utils.output(thread_id, "worker", "process_sheet", "Tag Error: %s, \tValue: %s, \tERROR: %s" % (i.tag, i.value, i.error), slock)
+                        # end if
+                    # end for
+                # end if
+            except Exception as ex:
+                utils.output(thread_id, "worker", "process_sheet", "Block Write Failed, Attempting individual write(s) - exception %s" % ex, slock)
+                for aTag, aValue in data_tuples:
+                    response = controller.write_tag(aTag, aValue, plc_tag_database)
+                    utils.output(thread_id, "wroker", "process_sheet", "Tag: %s, Value: %s, Error: %s" % (aTag, aValue, response.error), slock)
 
-                # if there are data validation warnings, print them out
-                if len(controller.tag_validation_warnings) > 0:
-                    utils.output(thread_id, "worker", "process_sheet", "DATA VALIDATION WARNINGS: %s" % controller.tag_validation_warnings, slock) 
+            # write the controller tags
+            #try:
+            #    response = controller.write_tags(data_tuples)
+            #except Exception as ex:
+            #    response = None
+            #    raise Exception("WRITE ERROR: %s. If datatype is a string check that there are not any special characters in the string." % ex)
 
-                # print the downloading message
-                utils.output(thread_id, "worker", "process_sheet", "%s--DOWNLOADING-- Data Chunk [%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
-
-                # wait for a  CIP connection from the manager, 
-                # this is a blocking call so it won't continue until
-                # it has one
-                cip_manager.wait_for_connection()
-
-                # write the controller tags
-                try:
-                    response = controller.write_tags(data_tuples)
-                except Exception as ex:
-                    response = None
-                    raise Exception("WRITE ERROR: %s. If datatype is a string check that there are not any special characters in the string." % ex)
-
-                # remove the connection from the manager that way
-                # another thread can access it.
-                cip_manager.remove_connection()
-
-            else:
-                utils.output(thread_id, "worker", "process_sheet", "-----------------DATA VALIDATIONS ERROR-DATA NOT DOWNLOADED-----------------", slock)
-                utils.output(thread_id, "worker", "process_sheet", "DATA VALIDATIONS SHEET: %s COLUMN: %s" % (sheet_name, plc_data_column['address']['column']), slock)
-                utils.output(thread_id, "worker", "process_sheet", "DATA VALIDATIONS ERROR: %s" % controller.tag_validation_error, slock)
-                utils.output(thread_id, "worker", "process_sheet", "-----------------DATA VALIDATIONS ERROR-DATA NOT DOWNLOADED-----------------", slock)
-                raise Exception("Data Validation Error: Aborted processing.")
-
-            if not all(response):
-                # there were errors during transmission
-                for i in response:
-                    if i.error:
-                        utils.output(thread_id, "worker", "process_sheet", "Tag Error: %s, \tValue: %s, \tERROR: %s" % (i.tag, i.value, i.error), slock)
-                    # end if
-                # end for
-            # end if
+            # remove the connection from the manager that way
+            # another thread can access it.
+            cip_manager.remove_connection()
 
         elif operation == PLC_OPERATION_UPLOAD:
             

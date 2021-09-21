@@ -40,196 +40,62 @@ class ConnManager(object):
         self.add_connection()
 
 class LogixController(object):
-    def __init__(self, ip_address_string, slot_number, tag_structure=None):
+    def __init__(self, ip_address_string, slot_number):
         self.cip_path = "%s/%s" % (ip_address_string, slot_number)
-        self.plc_info = None
-        self.tag_structure = tag_structure
-        self.tag_validation_error = {}
-        self.tag_validation_warnings = []
-    def get_plc_tags(self):
-        """
-        This function reads the tags inside the controller
-        and returns them. This only needs to be done once.
-        """
-        if self.tag_structure is None or len(self.tag_structure) == 0:
-            c = LogixDriver(self.cip_path, init_tags=True)
-            c.open()
-            self.plc_info = c.info
-            self.tag_structure = c._tags
-            c.close()
-            return self.tag_structure
-        else:
-            return self.tag_structure
+        self._tag_database = None
 
-    def get_logix_driver(self):
-        c = LogixDriver(self.cip_path)
+    def get_tag_database(self):
+        driver = LogixDriver(self.cip_path, init_tags=True)
+        driver.open()
+        _tag_database = driver._tags
+        driver.close()
+        return _tag_database
 
-    def read_tags(self, tag_list):
-        return self.__plc_operation__(tag_list, False)
-
-    def write_tags(self, tag_list):
-        return self.__plc_operation__(tag_list, True)
-
-    def _get_tag_info(self, base, attrs):
-
-        def _recurse_attrs(attrs, data):
-            cur, *remain = attrs
-            curr_tag = utils.strip_array(cur)
-            if not len(remain):
-                return data[curr_tag]
-            else:
-                if curr_tag in data:
-                    return _recurse_attrs(remain, data[curr_tag]['data_type']['internal_tags'])
-                else:
-                    return None
-        try:
-            _base_tag = utils.strip_array(base)
-            data = self.get_plc_tags()[_base_tag]
-            if not len(attrs):
-                return data
-            else:
-                return _recurse_attrs(attrs, data['data_type']['internal_tags'])
-        except KeyError as err:
-            raise RequestError(f"Tag doesn't exist - {err.args[0]}")
-        except Exception as err:
-            _msg = f"failed to get tag data for: {base}, {attrs}"
-            raise RequestError(_msg) from err
-
-
-    def validate_data_types(self, tags_list, data_type_string):
-
-        # controller data types that exist in tag list
-        _data_types = []
-
-        # clears out the errors and warnings on the first run
-        self.tag_validation_warnings = []
-        self.tag_validation_error = {}
-
-        if data_type_string is None:
-            self.tag_validation_error = {
-                "message": "function can not pass None in for data type"
-            }
-            return False
+    def set_tag_database(self, tag_database):
+        self._tag_database = tag_database
+    
+    def read_tag(self, tag, tag_database):
         
-        # make sure all of the tags in the list are of the same data type
-        # and are compatible with the main sheet data type
-        for i in tags_list:
-
-            # splits the tuple into different variables.
-            _tag_string, _tag_value = i
-
-            # get the data type from the controller tag list
-            base, *attrs = _tag_string.split('.')
-            definition = self._get_tag_info(base, attrs)
-            if definition['tag_type'] == 'struct':
-                _controller_data_type = definition['data_type']['name']
-            else:
-                _controller_data_type = definition['data_type']
-
-            # covers string data type of format STRING_<char_length>
-            # where char_length is the length of the string allowed
-            if len(_controller_data_type) >= 6:
-                if _controller_data_type[0:6] == "STRING":
-                    _controller_data_type = "STRING"
-            
-
-            # append the controller data type to the list if
-            # it is not already in there.
-            if _controller_data_type not in _data_types: 
-                _data_types.append(_controller_data_type)
-
-            # figuring out the sheet data type
-            _sheet_type = None
-            _dint_type_strings = ["DINT", "DINT DATA", "DINT-32 DATA", "DINT-32"]
-            _real_type_strings = ["REAL", "FLOAT", "FLOAT DATA"]
-            _string_type_strings = ["STRING", "STRING DATA"]
-            _int_type_strings = ["INT", "INT DATA", "INT-16 DATA"]
-            if data_type_string in _dint_type_strings:
-                _sheet_type = "DINT"
-            elif data_type_string in _real_type_strings:
-                _sheet_type = "REAL"
-            elif data_type_string in _string_type_strings:
-                _sheet_type = "STRING"
-            elif data_type_string in _int_type_strings:
-                _sheet_type = "INT"
-            else:
-                self.tag_validation_error = {
-                    "message":"unsupported data type",
-                    "data type": data_type_string,
-                    "tag": _tag_string
-                }
-                return False
-            
-            # if the tag in the controller does not match the tag in the sheet
-            # there are a couple of things we can do.
-            # if the data types are not equal
-            # error - if one is a string and the other is not
-            # error - if the sheet is a dint and the controller is an int or sint
-            # error - if the sheet is a float and the controller is not
-            # warn - if the sheet is a dint and the controller is a float
-            # warn - if the sheet is an int and the controller is a dint
-            if _sheet_type == "STRING" and _controller_data_type != "STRING" or \
-                _sheet_type != "STRING" and _controller_data_type == "STRING":
-                self.tag_validation_error = {
-                    "message":"sheet is a string type and controller type is a %s" % _controller_data_type,
-                    "tag":_tag_string
-                }
-                return False
-            elif _sheet_type == "DINT" and _controller_data_type == "INT":
-                self.tag_validation_error = {
-                    "message":"sheet is a dint and controller data type is an INT",
-                    "tag":_tag_string
-                }
-                return False
-            elif _sheet_type == "REAL" and _controller_data_type == "DINT":
-                self.tag_validation_error = {
-                    "message":"sheet is a FLOAT and the controller type is a DINT",
-                    "tag": _tag_string
-                }
-                return False
-            elif _sheet_type == "DINT" and _controller_data_type == "REAL":
-                self.tag_validation_warnings.append(
-                    {
-                        "message":"Data mismatch warning. Sheet data is DINT and controller type is REAL",
-                        "tag":_tag_string
-                    }
-                )
-            elif _sheet_type == "INT" and _controller_data_type == "DINT":
-                self.tag_validation_warnings.append(
-                    {
-                        "message":"Data mismatch warning. Sheet data is INT and controller type is DINT",
-                        "tag":_tag_string
-                    }
-                )
-
-        if len(_data_types) > 1:
-            self.tag_validation_error = {
-                "message":"tags in data chunk are not of the same data type",
-                "sheet tag types": _data_types
-            }
-            return False
-
-        # if it gets here, return True
-        return True
-
-    def __plc_operation__(self, tag_list, write=False):
-        _tag_structure = self.get_plc_tags()
-        c = LogixDriver(path=self.cip_path, init_tags=False, init_program_tags=False)
+        driver = LogixDriver(self.cip_path, init_tags=False)
+        driver._tags = tag_database
+        driver.open()
+        result = driver.read(tag)
+        driver.close()
+        return result
         
-        # not sure why I would be doing that.
-        c._tags = _tag_structure
+    def read_tags(self, tag_list, tag_database):
+        return self.__plc_operation__(tag_list, tag_database, False)
 
-        # open the plc connection
-        c.open()
+    def write_tags(self, tag_list, tag_database):
+        return self.__plc_operation__(tag_list, tag_database, True)
+
+    def write_tag(self, tag, value, tag_database):
+
+        driver = LogixDriver(self.cip_path, init_tags=False)
+        driver._tags = tag_database
+        driver.open()
+        result = driver.write((tag, value))
+        driver.close()
+        return result
+
+    def __plc_operation__(self, tag_list, tag_database, write=False):
+
+        # initiates the driver
+        driver = LogixDriver(self.cip_path, init_tags=False)
+        
+        # sets the tags to the tag database that is in
+        # memory
+        driver._tags = tag_database
+
+        # open the connection
+        driver.open()
 
         if write:
-            results = c.write(*tag_list)
+            results = driver.write(*tag_list)
         else:
-            results = c.read(*tag_list)
+            results = driver.read(*tag_list)
 
-        # close the connection after the
-        # operation.
-        c.close()
+        # close the driver at the end of the operation
+        driver.close()
 
         return results
-        
