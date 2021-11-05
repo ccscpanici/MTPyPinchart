@@ -136,20 +136,26 @@ def process_sheet(**kwargs):
                 # attempts to write the controller tags down
                 response = controller.write_tags(data_tuples, plc_tag_database)
             
-                if not all(response):
+                if len(data_tuples) > 1 and not all(response):
                     # there were errors during transmission
                     for i in response:
                         if i.error:
                             utils.output(thread_id, "worker", "process_sheet", "Tag Error: %s, \tValue: %s, \tERROR: %s" % (i.tag, i.value, i.error), slock)
                         # end if
                     # end for
+                
+                # if the data tuples are only one long, then the response is simply the
+                # tag object and not an list of tag objects.
+                elif len(data_tuples) == 1 and response.error:
+                    utils.output(thread_id, "worker", "process_sheet", "Tag Error: %s, \tValue: %s, \tERROR: %s" % (response.tag, response.value, response.error), slock)
                 # end if
             
             except Exception as ex:
-                utils.output(thread_id, "worker", "process_sheet", "Block Write Failed, Attempting individual write(s) - exception %s" % ex, slock)
-                for aTag, aValue in data_tuples:
-                    response = controller.write_tag(aTag, aValue, plc_tag_database)
-                    utils.output(thread_id, "wroker", "process_sheet", "Tag: %s, Value: %s, Error: %s" % (aTag, aValue, response.error), slock)
+                utils.outputs(thread_id, "worker", "process_sheet", "EXCEPTION: \t%s" % ex, slock)
+            #    utils.output(thread_id, "worker", "process_sheet", "Block Write Failed, Attempting individual write(s) - exception %s" % ex, slock)
+            #    for aTag, aValue in data_tuples:
+            #        response = controller.write_tag(aTag, aValue, plc_tag_database)
+            #        utils.output(thread_id, "wroker", "process_sheet", "Tag: %s, Value: %s, Error: %s" % (aTag, aValue, response.error), slock)
 
             # remove the cip connection from the manager, releasing it
             # for a different thread

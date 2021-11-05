@@ -6,7 +6,10 @@ import os
 # DEBUG WHATS HAPPENING, A GOOD THING TO TRY WOULD BE TO
 # SWITCH THIS TO FALSE, THEN, IT WILL PUT ALL OF THE
 # PROCESSING ON ONE THREAD.
-MULTITHREAD = True
+# 
+# MULTITHREADED BASED ON DEBUG MODE
+#
+#
 
 # DEBUG MODE - TURNING THIS ON GIVES THE USER THE ABILITY TO
 # USE THE DEBUG FILE VARIABLE AND THE DEBUG_USER_ARGS VARIABLE
@@ -16,13 +19,16 @@ DEBUG_MODE = False
 # If DEBUG_MODE, than automatically turn off multithreading
 if DEBUG_MODE:
     MULTITHREAD = False
+else:
+    MULTITHREAD = True
+# end if
 
 # DEBUG_FILE = C:\\Users\\CCS\\Documents\\Pinchart.xlsm
 # process the pinchart in the directory.
 #DEBUG_FILE = os.getcwd() + "\\" + "Pinchart.xlsm"
 #DEBUG_FILE = "Z:\\data\\Documents\\_Active Jobs\\CFR\\C 20082 Saputo Las Cruces Brine UF\\03_Documents\\03.1_PinCharts\\03.1.1_PinCharts\\20082 Setpoints.xlsm"
 #DEBUG_FILE = "Z:\\data\\Documents\\_Active Jobs\\CFR\\C 20082 Saputo Las Cruces Brine UF\\03_Documents\\03.1_PinCharts\\03.1.1_PinCharts\\20082 Setpoints.xlsm"
-DEBUG_FILE = "Z:\\data\\Downloads\\Cheese Belt IO List Tool.xlsm"
+DEBUG_FILE = "Z:\\data\\Downloads\\CIP18 Pinchart.xlsm"
 
 # DEBUG USER ARGUMENTS - WHEN IN DEBUG MODE, THE SYSTEM WILL USE THESE.
 # THE USER CAN MODIFY WHAT THEY NEED TO DO.
