@@ -329,6 +329,12 @@ class PLCSheetData(SheetDataBase):
         return plc_data
     # end update_data_with_new_values
 
+    def update_data_with_new_value(self, data_type, plc_data, new_value_from_opc):
+        new_plc_tag = new_value_from_opc
+        _value = utils.data_converter(new_plc_tag.value, data_type)
+        plc_data[0]['value'] = _value
+        return plc_data
+
     def get_update_ranges(self, plc_data_column, config_data):
         
         # this method needs to get updated to allow for spaces.

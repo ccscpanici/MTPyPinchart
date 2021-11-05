@@ -182,7 +182,13 @@ def process_sheet(**kwargs):
             if response:
                 # process the return data, if there are a bunch
                 # of errors, maybe kick it out?
-                plc_data_column['plc_data'] = sheet_object.update_data_with_new_values(plc_data_column['data']['type'], plc_data_column['plc_data'], response)
+                if len(addresses) == 1:
+                    # UPDATE THE SINGLE VALUE
+                    plc_data_column['plc_data'] = sheet_object.update_data_with_new_value(plc_data_column['data']['type'], plc_data_column['plc_data'], response)
+                else:
+                    # UPDATE THE VALUE LIST
+                    plc_data_column['plc_data'] = sheet_object.update_data_with_new_values(plc_data_column['data']['type'], plc_data_column['plc_data'], response)
+                # end if
 
                 # gets the value ranges from the serializer
                 value_range = sheet_object.get_update_ranges(plc_data_column, config_data)
