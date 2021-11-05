@@ -152,6 +152,8 @@ def process_sheet(**kwargs):
             
             except Exception as ex:
                 utils.outputs(thread_id, "worker", "process_sheet", "EXCEPTION: \t%s" % ex, slock)
+            
+            # THIS SHOULD NOT HAPPEN ANYMORE - TO BE DELETED.
             #    utils.output(thread_id, "worker", "process_sheet", "Block Write Failed, Attempting individual write(s) - exception %s" % ex, slock)
             #    for aTag, aValue in data_tuples:
             #        response = controller.write_tag(aTag, aValue, plc_tag_database)
