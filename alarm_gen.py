@@ -15,7 +15,6 @@ alarm_files = {
 }
 
 # ---------------------------------------------------------- DO NOT TOUCH ---------------------------------------------------------------
-
 if __name__ == '__main__':
 
     # xml template file that we will use. The system will populated the triggers and messsages
@@ -91,7 +90,11 @@ if __name__ == '__main__':
         # end for
     # end for
 
-    # write the xml file
+    # indents the XML file so it is ledgible in the file instead of
+    # one giant string block
     ET.indent(tree)
+
+    # write the xml file
     tree.write("alarms.xml")
+    
     print("----- Alarm Generation Complete -----")
