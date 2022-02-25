@@ -135,7 +135,11 @@ def process_sheet(**kwargs):
             try:
                 # attempts to write the controller tags down
                 response = controller.write_tags(data_tuples, plc_tag_database)
-            
+            except Exception as ex:
+                response = None
+                utils.output(thread_id, "worker", "process_sheet", "EXCEPTION: \t%s" % ex, slock)
+
+            if response:
                 if len(data_tuples) > 1 and not all(response):
                     # there were errors during transmission
                     for i in response:
@@ -149,16 +153,9 @@ def process_sheet(**kwargs):
                 elif len(data_tuples) == 1 and response.error:
                     utils.output(thread_id, "worker", "process_sheet", "Tag Error: %s, \tValue: %s, \tERROR: %s" % (response.tag, response.value, response.error), slock)
                 # end if
+            else:
+                raise Exception("Received no reponse from controller. Tags most likely do not exist.")
             
-            except Exception as ex:
-                utils.outputs(thread_id, "worker", "process_sheet", "EXCEPTION: \t%s" % ex, slock)
-            
-            # THIS SHOULD NOT HAPPEN ANYMORE - TO BE DELETED.
-            #    utils.output(thread_id, "worker", "process_sheet", "Block Write Failed, Attempting individual write(s) - exception %s" % ex, slock)
-            #    for aTag, aValue in data_tuples:
-            #        response = controller.write_tag(aTag, aValue, plc_tag_database)
-            #        utils.output(thread_id, "wroker", "process_sheet", "Tag: %s, Value: %s, Error: %s" % (aTag, aValue, response.error), slock)
-
             # remove the cip connection from the manager, releasing it
             # for a different thread
             cip_manager.remove_connection()
@@ -174,12 +171,27 @@ def process_sheet(**kwargs):
             utils.output(thread_id, "worker", "process_sheet", "%s--UPLOADING-- DATA CHUNK.[%s] of [%s]" % (sheet_name, _data_chunk_index, _data_chunks), slock)
 
             # upload the data
-            response = controller.read_tags(addresses, plc_tag_database)
+            try:
+                response = controller.read_tags(addresses, plc_tag_database)
+            except Exception as ex:
+                response = None
+                utils.output(thread_id, "worker", "process_sheet", "EXCEPTION: \t%s. Tags most likely do not exist in controller." % ex, slock)
 
             # remember to remove the CIP connection
             cip_manager.remove_connection()
                         
             if response:
+                if len(addresses) > 1 and not all(response):
+                    for i in response:
+                        if i.error:                            
+                            utils.output(thread_id, "worker", "process_sheet", "Tag Error: %s, \tValue: %s, \tERROR: %s" % (i.tag, i.value, i.error), slock)
+                        # end if
+                    # end for
+
+                elif len(addresses) == 1 and response.error:
+                    utils.output(thread_id, "worker", "process_sheet", "Tag Error: %s, \tValue: %s, \tERROR: %s" % (response.tag, response.value, response.error), slock)
+                # end if
+
                 # process the return data, if there are a bunch
                 # of errors, maybe kick it out?
                 if len(addresses) == 1:
@@ -208,6 +220,8 @@ def process_sheet(**kwargs):
                 # after it is all updated, release the lock
                 elock.release()
                 #utils.output(thread_id, "worker", "process_sheet", "RELEASED EXCEL LOCK.", slock)
+            else:
+                raise Exception("Received no reponse from controller. Tags most likely do not exist.")
             # end if
 
         elif operation == PLC_OPERATION_IMPORT:

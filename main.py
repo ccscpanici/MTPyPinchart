@@ -89,6 +89,7 @@ if __name__ == '__main__':
             print("\t-s\t--sheet\t\t\tOPTIONAL: Sheet string to process (default all sheets). Comma separated.")
             sys.exit(1)
         else:
+            
             raise Exception("Invalid switch %s" % switch)
             sys.exit(1)
         # end else
