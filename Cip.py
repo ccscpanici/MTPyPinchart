@@ -4,6 +4,7 @@ import threading
 import utils
 import time
 import utils
+import logging
 from typing import List, Tuple, Optional, Union
 from settings import DEBUG_MODE
 
@@ -42,11 +43,14 @@ class ConnManager(object):
         self.add_connection()
 
 class LogixController(object):
-    def __init__(self, ip_address_string, slot_number):
+    def __init__(self, ip_address_string, slot_number, verbose=False):
         self.cip_path = "%s/%s" % (ip_address_string, slot_number)
         self._tag_database = None
-        if DEBUG_MODE:
-            configure_default_logger(filename='pycomm3.log')
+        self.verbose = verbose
+        if DEBUG_MODE or self.verbose:
+            configure_default_logger(level=logging.debug, filename='pycomm3.log')
+        else:
+            configure_default_logger(level=logging.error, filename='pycomm3.err')
 
     def get_tag_database(self):
         driver = LogixDriver(self.cip_path, init_tags=True)

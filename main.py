@@ -27,6 +27,9 @@ if __name__ == '__main__':
     # sets the thread-id
     THREAD_ID = "MAIN"
 
+    # Sets verbose to false to start
+    VERBOSE = False
+
     # this locks the output so if we 
     # wanted to write the output to 
     # a file, it would not error. This
@@ -47,11 +50,12 @@ if __name__ == '__main__':
     # f - filename
     # o - operation
     # s - sheet names - if this doesn't exist then we will assume all the sheets
+    # v - verbose logging
     # print the arguments
     if settings.DEBUG_MODE:
         args = getopt.getopt(settings.DEBUG_USER_ARGS, "f:o:s:")
     else:
-        args = getopt.getopt(sys.argv[1:], "hf:o:s:")
+        args = getopt.getopt(sys.argv[1:], "hvf:o:s:")
     # end if
 
     for i in args:
@@ -78,6 +82,8 @@ if __name__ == '__main__':
 
             # lower case the sheet
             arg_sheets = [i.lower() for i in arg_sheets]
+        elif switch in ['-v', '--verbose']:
+            VERBOSE = True
         elif switch in ['-h', '--help']:
             print("--------------------------------------------------------------------------------")
             print("Usage: python main.py -f <excel file path>, -o <operation string>, (optional) -s <sheet list comma separated string>")
