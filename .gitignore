@@ -7,3 +7,8 @@ __pychache__/*
 ./settings.py
 *.pyc
 *.xml
+build/
+build/*
+dist/
+dist/*
+main.spec
