@@ -1,0 +1,8 @@
+The releases are built using pyinstaller.
+
+On a windows machine, create a python virtualenv and install all of the dependencies (requirements.txt). If you want to use latest versions that is your preference.
+
+Then, run the following command:
+    pyinstaller main.py --onefile --icon icon.ico
+
+The installer will build the executable into the "dist" directory.
