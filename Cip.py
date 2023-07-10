@@ -48,9 +48,9 @@ class LogixController(object):
         self._tag_database = None
         self.verbose = verbose
         if DEBUG_MODE or self.verbose:
-            configure_default_logger(level=logging.debug, filename='pycomm3.log')
+            configure_default_logger(level=logging.DEBUG, filename='pycomm3.log')
         else:
-            configure_default_logger(level=logging.error, filename='pycomm3.err')
+            configure_default_logger(level=logging.ERROR, filename='pycomm3.err')
 
     def get_tag_database(self):
         driver = LogixDriver(self.cip_path, init_tags=True)
