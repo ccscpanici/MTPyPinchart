@@ -1,9 +1,11 @@
 from pycomm3 import LogixDriver, RequestError
+from pycomm3.logger import configure_default_logger, LOG_VERBOSE
 import threading
 import utils
 import time
 import utils
 from typing import List, Tuple, Optional, Union
+from settings import DEBUG_MODE
 
 
 class ConnManager(object):
@@ -43,6 +45,8 @@ class LogixController(object):
     def __init__(self, ip_address_string, slot_number):
         self.cip_path = "%s/%s" % (ip_address_string, slot_number)
         self._tag_database = None
+        if DEBUG_MODE:
+            configure_default_logger(filename='pycomm3.log')
 
     def get_tag_database(self):
         driver = LogixDriver(self.cip_path, init_tags=True)
