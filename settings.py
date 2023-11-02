@@ -28,12 +28,12 @@ else:
 #DEBUG_FILE = os.getcwd() + "\\" + "Pinchart.xlsm"
 #DEBUG_FILE = "Z:\\data\\Documents\\_Active Jobs\\CFR\\C 20082 Saputo Las Cruces Brine UF\\03_Documents\\03.1_PinCharts\\03.1.1_PinCharts\\20082 Setpoints.xlsm"
 #DEBUG_FILE = "Z:\\data\\Documents\\_Active Jobs\\CFR\\C 20082 Saputo Las Cruces Brine UF\\03_Documents\\03.1_PinCharts\\03.1.1_PinCharts\\20082 Setpoints.xlsm"
-DEBUG_FILE = "C:\\CCS\\release\\CCS-PCU-ReleaseCandidate-0.0.1\\MTPyPinchart\\Pinchart_Sample.xlsm"
+DEBUG_FILE = "C:\\Users\\user\\Desktop\\Pinchart\\Milk HTST CIP.xlsm"
 
 # DEBUG USER ARGUMENTS - WHEN IN DEBUG MODE, THE SYSTEM WILL USE THESE.
 # THE USER CAN MODIFY WHAT THEY NEED TO DO.
 #DEBUG_USER_ARGS = ['-f', DEBUG_FILE, '-o', 'DOWNLOAD', '-s', 'PLC-DATA-AlarmMessages']
-DEBUG_USER_ARGS = ['-f', DEBUG_FILE, '-o', 'UPLOAD']
+DEBUG_USER_ARGS = ['-f', DEBUG_FILE, '-o', 'DOWNLOAD']
 
 # THIS SETS THE MAXIMUM NUMBER OF CIP CONNECTIONS AT ONCE
 # PLEASE - DON'T GO BEYOND 2 CONNECTIONS FOR NOW.
